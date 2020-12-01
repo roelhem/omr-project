@@ -25,7 +25,7 @@ library(wesanderson)
 Import data and check data format.
 ```{r 1}
 
-data <- read.csv("30-11-2020.csv", header = TRUE)
+data <- read.csv("data/30-11-2020.csv", header = TRUE)
 
 class <- lapply(data,class)
 ```
@@ -50,8 +50,8 @@ data_i %>%
   group_by(Province) %>%
   ggplot(aes(x=Province)) + 
   #guides(col=FALSE) +
-  geom_bar(mapping = aes(fill = Agegroup), alpha=0.9, color="darkgrey", position = position_stack(reverse = TRUE)) + 
-  scale_fill_manual(values = wes_palette("Zissou1", 10, type = "continuous")) +
+  geom_bar(mapping = aes(fill = Agegroup), alpha=0.9, position = position_stack(reverse = TRUE)) + 
+  scale_fill_manual(values = wes_palette("Rushmore1", 10, type = "continuous")) +
   coord_flip() +
   theme_classic() +
   labs(x="Province", y="Count", 
@@ -63,8 +63,8 @@ data_d %>%
   group_by(Province) %>%
   ggplot(aes(x=Province)) + 
   #guides(col=FALSE) +
-  geom_bar(mapping = aes(fill = Agegroup), alpha=0.9, color="darkgrey", position = position_stack(reverse = TRUE)) + 
-  scale_fill_manual(values = wes_palette("Zissou1", 7, type = "continuous")) +
+  geom_bar(mapping = aes(fill = Agegroup), alpha=0.9, position = position_stack(reverse = TRUE)) + 
+  scale_fill_manual(values = wes_palette("Rushmore1", 7, type = "continuous")) +
   coord_flip() +
   theme_classic() +
   labs(x="Province", y="Count", 
