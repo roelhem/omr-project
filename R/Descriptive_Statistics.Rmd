@@ -1,0 +1,72 @@
+---
+title: "Descriptive_Statistics"
+author: "OMR Group 2"
+date: "30-11-2020"
+mainfont: Garamond
+fontsize: 12pt
+urlcolor: blue
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r load_packages}
+
+library(ISLR)
+library(tidyverse)
+library(haven)
+library(readxl)
+library(tinytex)
+library(ggplot2)
+library(scales)
+library(wesanderson)
+
+```
+Import data and check data format.
+```{r 1}
+
+data <- read.csv("30-11-2020.csv", header = TRUE)
+
+class <- lapply(data,class)
+```
+
+Begin cleaning the data.
+```{r 2}
+data_i <- data %>% 
+  filter(Agegroup != "Unknown") %>%
+  filter(Agegroup != "<50") %>%
+  filter(Agegroup != "Oct-19") %>%
+  filter(Sex != "Unknown")
+
+data_d <- data %>%
+  filter(Agegroup != "Unknown") %>%
+  filter(Agegroup != "Oct-19") %>%
+  filter(Sex != "Unknown") %>%
+  filter(!is.na(Week_of_death))
+```
+
+```{r 3}
+data_i %>%
+  group_by(Province) %>%
+  ggplot(aes(x=Province)) + 
+  #guides(col=FALSE) +
+  geom_bar(mapping = aes(fill = Agegroup), alpha=0.9, color="darkgrey", position = position_stack(reverse = TRUE)) + 
+  scale_fill_manual(values = wes_palette("Zissou1", 10, type = "continuous")) +
+  coord_flip() +
+  theme_classic() +
+  labs(x="Province", y="Count", 
+      title="Infection by Age Group")
+```
+
+```{r 4}
+data_d %>%
+  group_by(Province) %>%
+  ggplot(aes(x=Province)) + 
+  #guides(col=FALSE) +
+  geom_bar(mapping = aes(fill = Agegroup), alpha=0.9, color="darkgrey", position = position_stack(reverse = TRUE)) + 
+  scale_fill_manual(values = wes_palette("Zissou1", 7, type = "continuous")) +
+  coord_flip() +
+  theme_classic() +
+  labs(x="Province", y="Count", 
+      title="Death by Age Group")
+```
