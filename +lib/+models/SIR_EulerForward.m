@@ -3,8 +3,10 @@ function [S,I,R] = SIR_EulerForward(Szero,Izero,Rzero,beta,alpha,dt,n)
 %   It will always start at `t=0`.
 
 %% Get the amount of age groups and total amount of people.
-m = length(Szero);
-N = (Szero + Izero + Rzero)';
+disp(Szero);
+m = height(Szero);
+disp(m);
+N = (Szero + Izero + Rzero);
 
 %% Ensure that the input has the right demensions.
 % Checking the initial values.
