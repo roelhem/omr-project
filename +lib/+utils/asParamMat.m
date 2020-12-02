@@ -15,7 +15,7 @@ elseif length(x) == m && min(size(x)) == 1
 elseif length(x) == 1
     out = eye(m)*x;
 else
-    error('x cannot be converted to a ParamMat of size m.');
+    error(['x cannot be converted to a ParamMat of size ' num2str(m) '.']);
 end
 end
 

@@ -22,13 +22,6 @@ colorsR = cool(m);
 hold on;
 % Plotting the values
 for i = 1:m
-    % Determine the colors of the plot
-    colors = brighten([
-        0        0.4470   0.7410
-        0.8500   0.3250   0.0980
-        0.4660   0.6740   0.1880
-    ],(i/m * 2 - 1)*0.9);
-
     % Creating the data-tips.
     dataTipRows = [
         dataTipTextRow(['Group ' num2str(i)], '')

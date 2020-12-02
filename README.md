@@ -27,6 +27,8 @@ This project has the following file structure.
    - `/+models`: Functions that run a model and return its output.
    - `/+plots`: Functions that generate plots.
    - `/+utils`: Shared functions that make the code more readable.
+ - `/+gui`: Apps that define a graphical interface for analysing the data
+            from the models.
  - `/+tests`: Package that contains the code-testing scripts.
  - `/data`: Folder that contains the _data sources_ (like `*.mat`-files).
  - `/docs`: Folder that should contain the documentation on the useage
