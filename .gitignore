@@ -1,2 +1,5 @@
 # Ignore autosaved files
 **/*.asv
+.Rproj.user
+.DS_Store
+.Rhistory
