@@ -18,6 +18,7 @@
 *.slxc binary
 *.slx binary merge=mlAutoMerge
 *.slxp binary
+*.zip binary
 
 ## Other common binary file types
 *.docx binary
