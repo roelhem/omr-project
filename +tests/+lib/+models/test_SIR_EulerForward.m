@@ -1,20 +1,44 @@
 %% Test model without transmissions (one group)
-[S,I,R] = lib.models.SIR_EulerForward(10, 20, 30, 0, 0, 1, 100);
+% [S,I,R,V] = SIR_EulerForward(Szero,Izero,Rzero,Vzero,beta,alpha,nu,dt,n)
+nu = zeros(1,100);
+[S,I,R,V] = lib.models.SIR_EulerForward(10, 20, 30, 40, 0, 0, nu, 1, 100);
 assert(isequal(S, ones(1,100)*10), 'S is not 10 everywhere.');
 assert(isequal(I, ones(1,100)*20), 'I is not 20 everywhere.');
 assert(isequal(R, ones(1,100)*30), 'R is not 30 everywhere.');
+assert(isequal(V, ones(1,100)*40), 'V is not 40 everywhere.');
 
 %% Test model without recovery (one group)
-[S,I,R] = lib.models.SIR_EulerForward(10, 20, 0, 1, 0, 1, 100);
+nu = zeros(1,100);
+[S,I,R,V] = lib.models.SIR_EulerForward(10, 20, 0, 0, 1, 0, nu, 1, 100);
 assert(not(isequal(S, ones(1,100)*10)), 'S is constant.');
 assert(not(isequal(I, ones(1,100)*20)), 'I is constant.');
 assert(isequal(R, zeros(1,100)), 'R is not zero.');
 
 %% Test model without infected (one group)
-[S,I,R] = lib.models.SIR_EulerForward(10, 0, 30, 1, 1, 1, 100);
+nu = zeros(1,100);
+[S,I,R,V] = lib.models.SIR_EulerForward(10, 0, 30, 0, 1, 1, nu, 1, 100);
 assert(isequal(S, ones(1,100)*10), 'S is not 10 everywhere.');
 assert(isequal(I, zeros(1,100)), 'I is constant.');
 assert(isequal(R, ones(1,100)*30), 'R is not 30 everywhere.');
+
+%% Test model without infected but with hundred percent immediate vaccinations (one group)
+nu = ones(1,100) .* 1.0;
+[S,I,R,V] = lib.models.SIR_EulerForward(10, 0, 30, 0, 1, 1, nu, 1, 100);
+peopleinfirststep = S(:,1) +I(:,1) +R(:,1) +V(:,1);
+peopleinlaststep = S(:,99) +I(:,99) +R(:,99) +V(:,99);
+S(:,99)
+I(:,99)
+R(:,99)
+V(:,99)
+%% Test model without infected but with 1 percent vaccinations each time step (one group)
+nu = ones(1,100) .* 0.01;
+[S,I,R,V] = lib.models.SIR_EulerForward(10, 0, 30, 0, 1, 1, nu, 1, 100);
+peopleinfirststep = S(:,1) +I(:,1) +R(:,1) +V(:,1);
+peopleinlaststep = S(:,99) +I(:,99) +R(:,99) +V(:,99);
+S(:,99)
+I(:,99)
+R(:,99)
+V(:,99)
 
 %% Independent groups give the same result when computed seperately.
 [S,I,R] = lib.models.SIR_EulerForward(...
