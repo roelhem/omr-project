@@ -17,6 +17,9 @@ else
     scr.retrieve_rivm_data;
 end
 
+%% Remove clutter from the workspace
+clear('cacheFiles');
+
 
 %% Helper Functions
 
