@@ -6,7 +6,8 @@ mainfont: Garamond
 fontsize: 12pt
 urlcolor: blue
 output: 
-  pdf_document:
+  html_document:
+    keep_md: yes
     latex_engine: xelatex
 ---
 
@@ -21,8 +22,17 @@ library(Matrix)
 library(tinytex)
 library(ggplot2)
 library(wesanderson)
+library(png)
 
 ```
+
+```{r setup-chunk, include=FALSE}
+knitr::opts_chunk$set(dev = "png",
+                      dpi = 300,
+                      echo = FALSE,
+                      cache = TRUE)
+```
+
 Import data and check data format.
 ```{r 1}
 
@@ -72,7 +82,7 @@ data_d <- data %>%
 
 ```{r 4}
 #Plot the number of infections using 'data_i' data frame
-data_i %>%
+plot_infection_agegroup <- data_i %>%
   arrange(Agegroup) %>%
   group_by(Province) %>%
   ggplot(aes(x=Province)) + 
@@ -82,12 +92,54 @@ data_i %>%
   coord_flip() +
   theme_classic() +
   labs(x="Province", y="Count", 
-      title="Infection by Age Group")
+      title="Infection rate across Age Group")
+```
+
+```{r }
+#Plot the number of infections by gender
+plot_infection_gender <- data_i %>%
+  arrange(Sex) %>%
+  group_by(Province) %>%
+  ggplot(aes(x=Province)) + 
+  #guides(col=FALSE) +
+  geom_bar(mapping = aes(fill = Sex), alpha=0.9, position = position_stack(reverse = TRUE)) + 
+  scale_fill_manual(values = wes_palette("Zissou1", 3, type = "continuous")) +
+  coord_flip() +
+  theme_classic() +
+  labs(x="Province", y="Count", 
+      title="Infection rate across Gender")
+```
+
+```{r }
+#Plot the number of hospitalisations
+plot_hospitalisation_agegroup <- data_i %>%
+  arrange(Sex) %>%
+  group_by(Agegroup) %>%
+  ggplot(aes(x=Agegroup)) + 
+  #guides(col=FALSE) +
+  geom_bar(mapping = aes(fill = Sex), alpha=0.9, position = position_stack(reverse = TRUE)) + 
+  scale_fill_manual(values = wes_palette("Zissou1", 3, type = "continuous")) +
+  coord_flip() +
+  theme_classic() +
+  labs(x="Agegroup", y="Count", 
+      title="Hospitalisation across Age Group")
+```
+
+```{r hospitalisation_age, dev = "png"}
+plot_hospitalisation_agegroup
+```
+
+```{r infection_rate_age, dev = "png"}
+plot_infection_agegroup
+```
+
+```{r infection_rate_gender, dev = "png"}
+plot_infection_gender
 ```
 
 ```{r 5}
-#Plot the numbe of deaths using the 'data_d' data frame
-data_d %>%
+#Plot the number of deaths using the 'data_d' data frame
+plot_death_agegroup <- data_d %>%
   group_by(Province) %>%
   ggplot(aes(x=Province)) + 
   #guides(col=FALSE) +
@@ -96,7 +148,29 @@ data_d %>%
   coord_flip() +
   theme_classic() +
   labs(x="Province", y="Count", 
-      title="Death by Age Group")
+      title="Death rate across Age Group")
+```
+
+```{r }
+#Plot the number of deaths by gender
+plot_death_gender <- data_d %>%
+  group_by(Province) %>%
+  ggplot(aes(x=Province)) + 
+  #guides(col=FALSE) +
+  geom_bar(mapping = aes(fill = Sex), alpha=0.9, position = position_stack(reverse = TRUE)) + 
+  scale_fill_manual(values = wes_palette("Zissou1", 3, type = "continuous")) +
+  coord_flip() +
+  theme_classic() +
+  labs(x="Province", y="Count", 
+      title="Death rate across Gender")
+```
+
+```{r death_rate, dev = "png"}
+plot_death_agegroup
+```
+
+```{r death_rate_gender, dev = "png"}
+plot_death_gender
 ```
 
 ```{r 6}
@@ -137,6 +211,7 @@ diag_d_prop <- Diagonal(nrow(agg_d), agg_d$Proportion)
 ```
 
 ```{r 7}
+#Calculate the infection rate over 10 complete dayas
 agg_i10 <- aggregate(data_i10$Agegroup, by=list(data_i10$Agegroup), FUN=length)
 
 agg_i10 <- agg_i10 %>%
@@ -146,7 +221,7 @@ agg_i10 <- agg_i10 %>%
     mutate(Sum = sum(agg_i10$x)) %>%
     mutate(Proportion=(round(Count/Sum,4)))
 
-#agg_i10 = I_zero
+#Note: in MATLAB we have agg_i10 = I_zero
 #Now construct R_0 from agg_i and agg_i10
 R0 = (agg_i$Count - agg_i10$Count)
 

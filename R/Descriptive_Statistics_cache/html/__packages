@@ -1,0 +1,17 @@
+base
+ISLR
+dplyr
+tidyverse
+ggplot2
+tibble
+tidyr
+readr
+purrr
+stringr
+forcats
+haven
+readxl
+Matrix
+tinytex
+wesanderson
+png
