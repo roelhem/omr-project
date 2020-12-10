@@ -17,7 +17,7 @@ assert(height(data) == n, ['The matrix from "' filepath '" is not a square matri
 
 %% Loading the groups from the matrix.
 groups = readcell(filepath, 'Range', [1 1 1 n], 'DatetimeType', 'text')';
-groups = lib.utils.fixDateAutocorrect(groups);
+groups = lib.utils.strToBoundaries(groups);
+groups = lib.utils.boundariesToCat(groups);
 
 end
-
