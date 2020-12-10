@@ -58,7 +58,7 @@ function output = cbs_populationTotal()
             upperBound = str2double(exact{1});
         elseif(~isempty(high{1}) && ~isempty(low{1}))
             lowerBound = str2double(low{1});
-            upperBound = str2double(high{1});
+            upperBound = str2double(high{1}) - 1;
         elseif(~isempty(low{1}))
             lowerBound = str2double(low{1});
             upperBound = inf;

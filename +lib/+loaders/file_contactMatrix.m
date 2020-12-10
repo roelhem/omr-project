@@ -1,4 +1,4 @@
-function [data, groups] = file_contactMatrix(filename)
+function [T, data, groups, groupBoundaries] = file_contactMatrix(filename)
 %FILE_CONTACTMATRIX Reads and validates the date from a contact matrix csv-file.
 
 
@@ -17,7 +17,17 @@ assert(height(data) == n, ['The matrix from "' filepath '" is not a square matri
 
 %% Loading the groups from the matrix.
 groups = readcell(filepath, 'Range', [1 1 1 n], 'DatetimeType', 'text')';
-groups = lib.utils.strToBoundaries(groups);
-groups = lib.utils.boundariesToCat(groups);
+groupBoundaries = lib.utils.strToBoundaries(groups);
+groups = lib.utils.boundariesToCat(groupBoundaries);
+
+%% Put everything in a table.
+T = array2table(data);
+T.Properties.VariableNames = string(groups);
+T.Properties.RowNames = string(groups);
+
+Group = table(groups, groupBoundaries, 'VariableNames', {'Category', 'Boundaries'});
+
+T = addvars(T, Group);
+
 
 end
