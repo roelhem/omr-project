@@ -2,6 +2,12 @@
 %    It will load the data from the cache if it exists. If not, it 
 %    will download the data using the `retrieve_rivm_data`-script.
 
+global rivm_infectiousPeople;
+global rivm_reproduction; 
+global rivm_sewage;
+global rivm_totalPerMunicipality;
+global rivm_cases;
+
 disp('LOADING THE RIVM DATA...');
 disp('  ');
 

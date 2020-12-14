@@ -1,7 +1,7 @@
 % LOAD_RIVM_DATA Loads the data from the RIVM-api's. 
 %    It will load the data from the cache if it exists. If not, it 
 %    will download the data using the `retrieve_rivm_data`-script.
-
+global cbs_populationTotal;
 disp('LOADING THE CBS DATA...');
 disp('  ');
 

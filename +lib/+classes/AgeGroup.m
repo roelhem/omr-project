@@ -93,7 +93,25 @@ classdef AgeGroup
             assert(height(values) == height(B.Boundaries), "Height of values and valueGroupBoundaries don't match.")
             
             % Initialize the result.
-            out = obj.groupOverlap(B) * values;
+            out = obj.groupOverlap(B.Boundaries) * values;
+        end
+        
+        function out = avgResize(obj, values, valueGroupBoundaries)
+            %AVGRESIZE Takes a vector of values and resizes the values
+            %   by taking the weighted average of the overlap.
+            
+            % Ensure that the input has the right dimensions.
+            B = lib.classes.AgeGroup(valueGroupBoundaries);
+            assert(height(values) == height(B.Boundaries), "Height of values and valueGroupBoundaries don't match.")
+            
+            % Get the overlap matrix.
+            Overlap = obj.groupOverlap(B.Boundaries);
+            % Initialize the result.
+            out = (Overlap * values) ./ sum(Overlap, 2);
+        end
+        
+        function out = resize(obj, V, B)
+            out = obj.sumPerGroup(V, B);
         end
     end
 end

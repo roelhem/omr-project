@@ -38,9 +38,9 @@ for i = 1:n-1
     % Getting the transmission between groups.
     StoI = (beta * (I(:,i) ./ N)) .* S(:,i);
     ItoR = alpha * I(:,i);
-    StoV = nu .* S(:,i);
-    ItoV = nu .* I(:,i);
-    RtoV = nu .* R(:,i);
+    StoV = nu(:, i) .* S(:,i);
+    ItoV = nu(:, i) .* I(:,i);
+    RtoV = nu(:, i) .* R(:,i);
 
     % Reccursively update the state.
     S(:,i+1) = S(:,i) + (- StoI        - StoV              ) * dt;

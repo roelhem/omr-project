@@ -5,6 +5,30 @@ classdef AgeGroupPopulation < lib.classes.AgeGroup
         Population
     end
     
+    methods(Static)
+        function obj = fromCbs(a, b)
+            global cbs_populationTotal;
+            
+            switch nargin
+                case 2
+                    groupCategory = a;
+                    gender = b;
+                case 1
+                    groupCategory = a;
+                    gender = 'Total';
+                otherwise
+                    groupCategory = 'One';
+                    gender = 'Total';
+            end
+            
+            T = cbs_populationTotal.(groupCategory);
+            obj = lib.classes.AgeGroupPopulation(...
+                T.Group.Boundaries,...
+                T.(gender)...
+            );
+        end
+    end
+    
     methods
         function obj = AgeGroupPopulation(groups, population)
             %AGEGROUPPOPULATION Construct an instance of this class
@@ -40,14 +64,16 @@ classdef AgeGroupPopulation < lib.classes.AgeGroup
             O = obj.groupOverlap(G.Boundaries);
             
             % Get the matrix that weights the values with the population.
+            % out = diag(1./obj.Population) * O * diag(G.Population);
             out = diag(1./obj.Population) * O * diag(G.Population);
         end
         
         function out = weightedResize(obj, V, G)
-            %WEIGHTEDRESIZE Weights 
+            %WEIGHTEDRESIZE Weights
             
             % Initialize the result.
-            out = obj.groupOverlap(G) * V;
+            O = obj.weightedGroupOverlap(G);
+            out = O * V;
         end
     end
 end
