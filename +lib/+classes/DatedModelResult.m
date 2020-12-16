@@ -9,9 +9,9 @@ classdef DatedModelResult < lib.classes.ModelResult
     end
     
     methods
-        function obj = DatedModelResult(State, DeltaT, n, StartDate)
+        function obj = DatedModelResult(State, DeltaT, Method, StartDate)
             %DATEDMODELRESULT Creates a new Dated Model Result.
-            obj = obj@lib.classes.ModelResult(State, DeltaT, n);
+            obj = obj@lib.classes.ModelResult(State, DeltaT, Method);
             obj.StartDate = StartDate;
         end
     end

@@ -9,3 +9,7 @@ scr.clear_rivm_data;
 %% Clear Workspace
 disp('Clearing the workspace...');
 clear();
+
+%% Success Message.
+disp(' ');
+disp('Successfully cleared all caches!');
