@@ -10,6 +10,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             obj = obj@lib.classes.AgeGroupPopulation(group, N);
             
             % Set default values.
+            obj.T         = days(0);
             obj.S         = obj.N;
             obj.I         = zeros(obj.m, 1);
             obj.R         = zeros(obj.m, 1);
@@ -72,6 +73,8 @@ classdef ModelState < lib.classes.AgeGroupPopulation
     
     %% Stateful properties.
     properties
+        T         % [1 x 1] The amount of days from the initial state
+                  %         of the model.
         S         % [m x 1] The number of susseptible people per age group.
         I         % [m x 1] The number of infectious people per age group.
         R         % [m x 1] The number of recovered people per age group.
@@ -370,9 +373,9 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         function obj = loadReprNumData(obj, at_date)
             global rivm_reproduction
             
-            T = rmmissing(rivm_reproduction);
-            T = T(T.Date <= datetime(at_date), :);
-            obj.ReprEff = T{end, 'Rt_avg'};
+            Filtered = rmmissing(rivm_reproduction);
+            Filtered = Filtered(Filtered.Date <= datetime(at_date), :);
+            obj.ReprEff = Filtered{end, 'Rt_avg'};
         end
         
         function obj = loadInitialValues(obj, at_date)
@@ -425,6 +428,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             % Create the state vector.
             State(1:n) = obj;
             for i = 1:n
+                State(i).T = obj.T + days(DeltaT * (i - 1));
                 State(i).S = SRes(:,i);
                 State(i).I = IRes(:,i);
                 State(i).R = RRes(:,i);
@@ -457,6 +461,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             end
             
             result = obj;
+            result.T = obj.T + days(DeltaT);
             result.S = SRes(:,2);
             result.I = IRes(:,2);
             result.R = RRes(:,2);

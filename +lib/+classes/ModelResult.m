@@ -46,8 +46,6 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
     %% Dependent properties.
     properties(Dependent)
         n double   % [1 x 1] The amount of steps in this model.
-        T duration % [1 x n] The duration of the timestep from he initail
-                   %         state.
     end
     
     methods
@@ -57,10 +55,6 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
         
         function obj = set.n(obj, value)
             obj = obj.resize(value);
-        end
-        
-        function out = get.T(obj)
-            out = days((0:obj.n - 1) * obj.DeltaT);
         end
     end
     
@@ -125,6 +119,8 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
     
     %% Derrived properties from the ModelState.
     properties(Dependent)
+        T duration % [1 x n] The duration of the timestep from he initail
+                   %         state.
         N          double % [m x n]
         S          double % [m x n]
         I          double % [m x n]
@@ -158,6 +154,10 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
     end
     
     methods
+        function out = get.T(obj)
+            out = obj.getValue('T');
+        end
+        
         function out = get.N(obj)
             out = obj.getValue('N');
         end
@@ -264,9 +264,17 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
         function out = getValue(obj, fieldName)
             c = arrayfun(@(x)x.(fieldName), obj.State, 'UniformOutput', false);
             if(width(c{1}) == 1)
-                out = cell2mat(c);
+                % Init the result.
+                out = zeros(height(c{1}), obj.n);
+                % Check if the elements are of type duration.
+                if isduration(c{1})
+                    out = days(out);
+                end
+                for i = 1:obj.n
+                    out(:,i) = c{i};
+                end
             else
-                out = zeros(width(c{1}), height(c{1}));
+                out = zeros(width(c{1}), height(c{1}), obj.n);
                 for i = 1:obj.n
                     out(:,:,i) = c{i};
                 end
