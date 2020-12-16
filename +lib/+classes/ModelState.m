@@ -15,7 +15,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             obj.R         = zeros(obj.m, 1);
             obj.Alpha     = ones(obj.m, 1) * 0.1;
             obj.Beta      = eye(obj.m, obj.m);
-            obj.Nu        = zeros(obj.m, 0);
+            obj.Nu        = zeros(obj.m, 1);
             obj.SusVect   = obj.avgResize(obj.STD_SusVect, obj.STD_Boundaries);
             obj.SympRatio = obj.avgResize(obj.STD_SympRatio, obj.STD_Boundaries);
         end
@@ -57,9 +57,9 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             obj = lib.classes.ModelState(scale.Boundaries, scale.Population);
             
             % Fill the object with data from the api's.
-            obj = obj.loadContactMatrix(CFile)...
-                    .loadReprNumData(D)...
-                    .loadInitialValues(D);
+            obj = obj.loadInitialValues(D)...
+                    .loadContactMatrix(CFile)...
+                    .loadReprNumData(D);
         end
     end
     
@@ -91,7 +91,6 @@ classdef ModelState < lib.classes.AgeGroupPopulation
     
     %% Derived properties.
     properties (Dependent)
-        m          % The amount of age groups.
         N          % [m x 1] The total amount of people per age group.
         V          % [m x 1] The number of vaccinated people per age group.
         U          % [m x 1] The number of unvaccinated people per age.
@@ -106,33 +105,60 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                    % can be expected to infect before they move to the
                    % 'removed' compartment, assuming that all their contacts
                    % are with people in the susceptible compartment.
+        ReprEff    % [1 x 1] The effective reproduction number.
         AsympRatio % [m x 1] The ratio of people that are infectious, but
                    % don't have symptoms.
         I_Symp     % [m x 1] The number of people that are infectious and
                    % have symptoms.
         I_Asymp    % [m x 1] The number of people that are infectious and
                    % don't have symptoms.
+                   
+        StoI       % [m x 1] The amount of people that move from S to I in
+                   % one day per age group.
+        ItoR       % [m x 1] The amount of people that move from I to R in
+                   % one day per age group.
+        StoV       % [m x 1] The amount of people that move from S to V in
+                   % one day per age group.
+        ItoV       % [m x 1] The amount of people that move from I to V in
+                   % one day per age group.
+        RtoV       % [m x 1] The amount of people that move from R to V in
+                   % one day per age group.
+        UtoV       % [m x 1] The amount of unvaccinated people that will
+                   % be vaccinated in one day per age group.
+                   
+        dS         % [m x 1] The change of S in people per day.
+        dI         % [m x 1] The change of I in people per day.
+        dR         % [m x 1] The change of R in people per day.
+        dU         % [m x 1] The change of U in people per day.
+        dV         % [m x 1] The change of V in people per day.
     end
     
     methods
-        function out = get.m(obj)
-            out = obj.size;
-        end
         
         function out = get.N(obj)
+            % GET.N Alias for the population per age group.
             out = obj.Population;
         end
         
         function obj = set.N(obj, value)
+            % SET.N Setting the population per age group.
+            %       This is just an alias for the `Population` on the
+            %       underlying age group distribution.
             assert(height(value) == obj.m);
-            obj.population = value;
+            obj.Population = value;
         end
         
         function out = get.U(obj)
+            % GET.U Gets the total amount of unvaccinated people.
+            %       Can be retrieved by getting the sum of `S`, `I` and
+            %       `R`.
             out = obj.S + obj.I + obj.R;
         end
         
         function obj = set.U(obj, value)
+            % SET.U Sets the total amount of unvaccinated people.
+            %       It will adjust `S`, `I` and `R` so that the ratios
+            %       Between those values will stay the same.
             assert(height(value) == obj.m);
             PrevU = obj.U;
             DeltaU = value - PrevU;
@@ -142,10 +168,16 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
         
         function out = get.V(obj)
+            % GET.V Gets the total amount of vaccinated people per age
+            %       group.
+            %       It will calculate this by substracting `U` from `N`.
             out = obj.N - obj.U;
         end
         
         function obj = set.V(obj, value)
+            % SET.V Sets the total amount of vaccinated people per age
+            %       group. It will calculate this by setting `U`.
+            %       @see `set.U`.
             assert(height(value) == obj.m);
             obj.U = obj.N - value;
         end
@@ -156,7 +188,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         
         function obj = set.Tau(obj, value)
             if(size(value) == 1)
-                value = ones(obj.size, 1) * value;
+                value = ones(obj.m, 1) * value;
             elseif(height(value) ~= obj.value || width(value) ~= 1)
                 error('Tau has wrong size.');
             end
@@ -164,7 +196,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
         
         function out = get.C(obj)
-            out = diag(1 ./ obj.SusVect) * obj.P_CtoI;
+            out = diag(1 ./ obj.SusVect) * obj.Beta;
         end
         
         function obj = set.C(obj, value)
@@ -174,21 +206,50 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
         
         function out = get.P_CtoI(obj)
-            out = obj.Beta; % TODO: Check this.
+            out = obj.Beta ./ obj.Alpha; % TODO: Check this.
         end
         
         function obj = set.P_CtoI(obj, value)
-            obj.Beta = value; % TODO: Check this.
+            obj.Beta = value .* obj.Alpha; % TODO: Check this.
         end
         
         function out = get.ReprNum(obj)
-            out = max(eig(obj.Beta));
+            % GET.REPRNUM Gets the reproduction number, when everyone is
+            %             is susceptible.
+            %             The value can is based on the identity.
+            %             ```LaTeX
+            %             \R_0 = \frac{\beta}{\alpha} \cdot N.
+            %             ```
+            out = max(eig(obj.Beta)) / mean(obj.Alpha);
         end
         
         function obj = set.ReprNum(obj, value)
+            % SET.REPRNUM Ajusts `Beta` such that the reproduction number,
+            %             will be the given value.
+            %             The value can is based on the identity.
+            %             ```LaTeX
+            %             \R_0 = \frac{\beta}{\alpha} \cdot N.
+            %             ```
             assert(width(value) == 1);
             assert(height(value) == 1);
             obj.Beta = obj.Beta * (value / obj.ReprNum);
+        end
+        
+        function out = get.ReprEff(obj)
+            % GET.REPREFF Gets the effective reproduction number `R_eff`.
+            %             The value can is based on the identity.
+            %             ```LaTeX
+            %             \R_eff = \frac{\beta}{\alpha} \cdot S.
+            %             ```
+            out = max(eig(obj.Beta)) / mean(obj.Alpha) * (sum(obj.S) / sum(obj.N));
+        end
+        
+        function obj = set.ReprEff(obj, value)
+            % SET.REPREFF Ajusts the `Beta` so that the effective
+            %             reproduction number becomes `R_eff`.
+            assert(width(value) == 1);
+            assert(height(value) == 1);
+            obj.Beta = obj.Beta * (value / obj.ReprEff);
         end
         
         function out = get.AsympRatio(obj)
@@ -221,6 +282,80 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             assert(height(value) == obj.m);
             obj.I = value ./ obj.AsympRatio;
         end
+        
+        function out = get.StoI(obj)
+            out = (obj.Beta * (obj.I ./ obj.N)) .* obj.S;
+        end
+        
+        function out = get.ItoR(obj)
+            out = obj.Alpha .* obj.I;
+        end
+        
+        function obj = set.ItoR(obj, value)
+            assert(width(value) == 1);
+            assert(height(value) == obj.m);
+            obj.Alpha = value ./ obj.I;
+        end
+        
+        function out = get.StoV(obj)
+            out = obj.Nu .* obj.S;
+        end
+        
+        function obj = set.StoV(obj, value)
+            assert(width(value) == 1);
+            assert(height(value) == obj.m);
+            obj.Nu = value ./ obj.S;
+        end
+        
+        function out = get.ItoV(obj)
+            out = obj.Nu .* obj.I;
+        end
+        
+        function obj = set.ItoV(obj, value)
+            assert(width(value) == 1);
+            assert(height(value) == obj.m);
+            obj.Nu = value ./ obj.I;
+        end
+        
+        function out = get.RtoV(obj)
+            out = obj.Nu .* obj.R;
+        end
+        
+        function obj = set.RtoV(obj, value)
+            assert(width(value) == 1);
+            assert(height(value) == obj.m);
+            obj.Nu = value ./ obj.R;
+        end
+        
+        function out = get.UtoV(obj)
+            out = obj.Nu .* obj.U;
+        end
+        
+        function obj = set.UtoV(obj, value)
+            assert(width(value) == 1);
+            assert(height(value) == obj.m);
+            obj.Nu = value ./ obj.U;
+        end
+        
+        function out = get.dS(obj)
+            out = - obj.StoI - obj.StoV;
+        end
+        
+        function out = get.dI(obj)
+            out = obj.StoI - obj.ItoR - obj.ItoV;
+        end
+        
+        function out = get.dR(obj)
+            out = obj.ItoR - obj.RtoV;
+        end
+        
+        function out = get.dU(obj)
+            out = -obj.UtoV;
+        end
+        
+        function out = get.dV(obj)
+            out = obj.UtoV;
+        end
     end
     
     %% Loading from datasources.
@@ -237,7 +372,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             
             T = rmmissing(rivm_reproduction);
             T = T(T.Date <= datetime(at_date), :);
-            obj.ReprNum = T{end, 'Rt_avg'};
+            obj.ReprEff = T{end, 'Rt_avg'};
         end
         
         function obj = loadInitialValues(obj, at_date)
@@ -267,8 +402,91 @@ classdef ModelState < lib.classes.AgeGroupPopulation
     
     %% Running the model.
     methods
+        
+        function result = run(obj, DeltaT, n, Method)
+            % RUN Runs the model and return a `ModelResult instance`.
+            if nargin <= 3
+                Method = "EulerForward";
+            end
+            
+            assert(DeltaT > 0, 'DeltaT has to be bigger than 0');
+            assert(n > 0, 'n has to be bigger than 0');
+            
+            % Run the model with the chosen method.
+            switch string(Method)
+                case "EulerForward"
+                    [SRes, IRes, RRes] = obj.run_EulerForward(DeltaT, n);
+                case "EulerBackward"
+                    [SRes, IRes, RRes] = obj.run_EulerBackward(DeltaT, n);
+                otherwise
+                    error(strcat("Method '", string(Method), "' not recognised/implemented."));
+            end
+            
+            % Create the state vector.
+            State(1:n) = obj;
+            for i = 1:n
+                State(i).S = SRes(:,i);
+                State(i).I = IRes(:,i);
+                State(i).R = RRes(:,i);
+            end
+            
+           
+            % Create the model result.
+            result = lib.classes.ModelResult(State, DeltaT, Method);
+        end
+        
+        function result = next(obj, DeltaT, Method)
+            % NEXT Get the next state with the provided DeltaT and Method.
+            if nargin <= 1
+                DeltaT = 1;
+            end
+            if nargin <= 2
+                Method = "EulerForward";
+            end
+            
+            assert(DeltaT > 0, 'DeltaT has to be bigger than 0');
+            
+            % Run the model with the chosen method.
+            switch string(Method)
+                case "EulerForward"
+                    [SRes, IRes, RRes] = obj.run_EulerForward(DeltaT, 2);
+                case "EulerBackward"
+                    [SRes, IRes, RRes] = obj.run_EulerBackward(DeltaT, 2);
+                otherwise
+                    error(strcat("Method '", string(Method), "' not recognised/implemented."));
+            end
+            
+            result = obj;
+            result.S = SRes(:,2);
+            result.I = IRes(:,2);
+            result.R = RRes(:,2);
+        end
+        
         function [S,I,R,V] = run_EulerForward(obj, DeltaT, n)
+            % RUN_EULERFORWARD Runs the model using the EulerForward
+            %                  numeric method.
             [SRes,IRes,RRes,VRes] = lib.models.SIRV_EulerForward(...
+                obj.S,...
+                obj.I,...
+                obj.R,...
+                obj.V,...
+                obj.Beta,...
+                obj.Alpha,...
+                [obj.Nu, zeros(obj.m, n - 1)],...
+                DeltaT,...
+                n...
+            );
+        
+            S = SRes;
+            I = IRes;
+            R = RRes;
+            V = VRes;
+        end
+        
+        function [S,I,R,V] = run_EulerBackward(obj, DeltaT, n)
+            % RUN_EULERBACKWARD Runs the model using the EulerBackward
+            %                   numeric method.
+            [SRes,IRes,RRes,VRes] = lib.models.SIRV_EulerBackward(...
                 obj.S,...
                 obj.I,...
                 obj.R,...
@@ -284,6 +502,37 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             I = IRes;
             R = RRes;
             V = VRes;
+        end
+    end
+    
+    %% Helpers to build an UI.
+    methods
+        function T = buildGoupTable(obj)
+            T = table( ...
+                round(obj.N), ...
+                round(obj.S), ...
+                round(obj.I), ...
+                round(obj.R), ...
+                round(obj.V), ...
+                obj.Alpha, ...
+                obj.Tau, ...
+                obj.SusVect, ...
+                obj.SympRatio, ...
+                round(obj.I_Symp), ...
+                'VariableNames', [
+                    "N_0"
+                    "S_0"
+                    "I_0"
+                    "R_0"
+                    "V_0"
+                    "Alpha"
+                    "Tau"
+                    "SusVect"
+                    "SympRatio"
+                    "I_Symp_0"
+                ], ...
+                'RowNames', string(obj.categories()) ...
+            );
         end
     end
 end

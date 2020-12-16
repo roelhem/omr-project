@@ -32,10 +32,16 @@ classdef AgeGroupPopulation < lib.classes.AgeGroup
     methods
         function obj = AgeGroupPopulation(groups, population)
             %AGEGROUPPOPULATION Construct an instance of this class
+            
+            if nargin == 0
+                groups = "0+";
+                population = 1;
+            end
+            
             obj = obj@lib.classes.AgeGroup(groups);
             
             assert(width(population) == 1, "Population must have width 1");
-            assert(height(population) == obj.size, "Population must have the same dimensions as the amount of groups.");
+            assert(height(population) == obj.m, "Population must have the same dimensions as the amount of groups.");
             assert(isnumeric(population), "Population must be an array of numeric values.")
             
             obj.Population = population;

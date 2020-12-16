@@ -3,7 +3,6 @@ function [S,I,R] = SIR_EulerForward(Szero,Izero,Rzero,beta,alpha,dt,n)
 %   It will always start at `t=0`.
 
 %% Get the amount of age groups and total amount of people.
-disp(Szero);
 m = height(Szero);
 disp(m);
 N = (Szero + Izero + Rzero);
@@ -30,7 +29,7 @@ R(:,1) = Rzero;
 %% Reccursively computing the values.
 for i = 1:n-1
     % Getting the transmission between groups.
-    StoI = (beta * (I(:,i) ./ N)) .* S(:,i);
+    StoI = (beta * I(:,i) ./ N) .* S(:,i);
     ItoR = alpha * I(:,i);
 
     % Reccursively update the state.

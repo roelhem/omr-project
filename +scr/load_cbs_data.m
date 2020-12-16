@@ -2,6 +2,7 @@
 %    It will load the data from the cache if it exists. If not, it 
 %    will download the data using the `retrieve_rivm_data`-script.
 global cbs_populationTotal;
+global cbs_AgeGroupPopulation;
 disp('LOADING THE CBS DATA...');
 disp('  ');
 

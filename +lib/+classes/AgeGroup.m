@@ -13,9 +13,21 @@ classdef AgeGroup
             if isa(input, 'lib.classes.AgeGroup')
                 obj.Boundaries = input.Boundaries;
             elseif isnumeric(input)
+                if width(input) > 2
+                    input = input';
+                end
+                
                 if width(input) == 1
-                    obj.Boundaries = input;
-                    obj.Boundaries(:,2) = Inf;
+                    m = height(input);
+                    obj.Boundaries = zeros(m, 2);
+                    if m > 1
+                        for i = 1:m-1
+                            obj.Boundaries(i,1) = input(i);
+                            obj.Boundaries(i,2) = input(i+1) - 1;
+                        end
+                    end
+                    obj.Boundaries(m, 1) = input(m);
+                    obj.Boundaries(m, 2) = inf;
                 else
                     obj.Boundaries = input;
                 end
@@ -38,11 +50,6 @@ classdef AgeGroup
             );
         end
         
-        function out = size(obj)
-            %SIZE Returns the amount of age groups stored.
-            out = height(obj.Boundaries);
-        end
-        
         function out = groupOverlap(obj, V)
             %GROUPOVERLAP Returns the proportion of overlap of a certain
             %group with a group managed in this class.
@@ -51,8 +58,8 @@ classdef AgeGroup
             assert(width(V) == 2, "Given valueGroupBoundaries doesn't have width 2.")
             
             % Init the result.
-            m = height(V);
-            out = zeros(obj.size, m);
+            other_m = height(V);
+            out = zeros(obj.m, other_m);
             
             % Set infinite values to 100.
             B = obj.Boundaries;
@@ -64,9 +71,9 @@ classdef AgeGroup
             V(:,2) = V(:,2);
             
             % Loop through all own groups B.
-            for i = 1:obj.size                
+            for i = 1:obj.m                
                 % Loop through all given groups V.
-                for j = 1:m
+                for j = 1:other_m
                     % Get the size of the overlap.
                     maxLow  = max(B(i,1), V(j,1)); % The maximum upper bound.
                     minUp   = min(B(i,2), V(j,2)); % The minimum lower bound.
@@ -110,9 +117,32 @@ classdef AgeGroup
             out = (Overlap * values) ./ sum(Overlap, 2);
         end
         
-        function out = resize(obj, V, B)
+        function out = sumResize(obj, V, B)
             out = obj.sumPerGroup(V, B);
         end
     end
+    
+    %% Derived properties.
+    properties(Dependent)
+        m             double      % [1 x 1] The amount of age groups.
+        GroupCategory categorical % [m x 1] The group categories.
+        GroupName     string      % [m x 1] The names of the group 
+                                  %         categories.
+    end
+    
+    methods
+        function out = get.m(obj)
+            out = height(obj.Boundaries);
+        end
+        
+        function out = get.GroupCategory(obj)
+            out = lib.utils.boundariesToCat(obj.Boundaries);
+        end
+        
+        function out = get.GroupName(obj)
+            out = string(obj.GroupCategory);
+        end
+    end
+    
 end
 

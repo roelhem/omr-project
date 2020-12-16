@@ -1,5 +1,5 @@
-function [S,I,R,V] = SIRV_EulerForward(Szero,Izero,Rzero,Vzero,beta,alpha,nu,dt,n)
-%SIRV_EULERFORWARD Runs the simple SIRV-model using the Euler Forward method.
+function [S,I,R,V] = SIRV_EulerBackward(Szero,Izero,Rzero,Vzero,beta,alpha,nu,dt,n)
+%SIRV_EULERFORWARD Runs the SIRV-model using the Euler Backward method.
 %   It will always start at `t=0`.
 
 %% Get the amount of age groups and total amount of people.
@@ -30,21 +30,25 @@ I(:,1) = Izero;
 R(:,1) = Rzero;
 V(:,1) = Vzero;
 
-
 %% Reccursively computing the values.
 for i = 1:n-1
     % Getting the transmission between groups.
-    StoI = (beta * I(:,i) ./ N) .* S(:,i);
-    ItoR = alpha * I(:,i);
-    StoV = nu(:, i) .* S(:,i);
-    ItoV = nu(:, i) .* I(:,i);
-    RtoV = nu(:, i) .* R(:,i);
+    StoI = @(x_I, x_S) (beta * x_I ./ N) .* x_S;
+    ItoR = @(x_I) alpha * x_I;
+    StoV = @(i, x_S) (nu(:, i) .* x_S);
+    ItoV = @(i, x_I) (nu(:, i) .* x_I);
+    RtoV = @(i, x_R) (nu(:, i) .* x_R);
 
-    % Reccursively update the state.
-    S(:,i+1) = S(:,i) + (- StoI        - StoV              ) * dt;
-    I(:,i+1) = I(:,i) + (  StoI - ItoR        - ItoV       ) * dt;
-    R(:,i+1) = R(:,i) + (         ItoR               - RtoV) * dt;
-    V(:,i+1) = V(:,i) + (                StoV + ItoV + RtoV) * dt;
+    % Get the optimistic values.
+    S_new = S(:,i) + (- StoI(I(:,i), S(:,i))                - StoV(i, S(:,i)) ) * dt;
+    I_new = I(:,i) + (  StoI(I(:,i), S(:,i)) - ItoR(I(:,i)) - ItoV(i, I(:,i)) ) * dt;
+    R_new = R(:,i) + (                         ItoR(I(:,i)) - RtoV(i, R(:,i)) ) * dt;
+    
+    % Set the new values.
+    S(:,i+1) = S(:,i) + (- StoI(I_new, S_new)               - StoV(i+1, S_new) ) * dt;
+    I(:,i+1) = I(:,i) + (  StoI(I_new, S_new) - ItoR(I_new) - ItoV(i+1, I_new) ) * dt;
+    R(:,i+1) = R(:,i) + (                       ItoR(I_new) - RtoV(i+1, R_new) ) * dt;
 end
+
 end
 

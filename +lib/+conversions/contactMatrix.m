@@ -13,7 +13,7 @@ MScale = cbs_AgeGroupPopulation.rescale(ageGroups);
 
 % Calculate the contact matrix on the wanted scale.
 A = table2array(D(1:m,1:m));
-M = MScale.weightedResize(MScale.weightedResize(A, DScale)', DScale);
+M = MScale.avgResize(MScale.weightedResize(A, DScale)', DScale);
 
 end
 
