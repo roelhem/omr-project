@@ -77,6 +77,9 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
         P      double    % [m x n] The total amount of people that will
                          %         be vaccinated before the vaccination
                          %         moment.
+        Ptot   double    % [m x 1] The total amount of people that will
+                         %         be vaccinated at the and of this
+                         %         vaccination strategy.
         T      duration  % [1 x n] The time after the initial state on
                          %         which the vaccination n will take
                          %         placed.
@@ -126,6 +129,10 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
             for i = 1:obj.n-1
                 obj.Rho(:,i) = (value(:,i+1) - value(:,i)) ./ obj.DeltaT(:,i);
             end
+        end
+        
+        function out = get.Ptot(obj)
+            out = sum(table2array(obj.DailyTable))';
         end
         
         function out = get.T(obj)
