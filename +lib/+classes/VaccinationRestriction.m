@@ -89,8 +89,6 @@ classdef VaccinationRestriction
             
             % Alias the population, for better readability.
             N = Groups.Population;
-            disp(maxVacc);
-            disp(N);
             
             % Just vaccinate the maximum amount immediately when there is
             % no daily bound.
@@ -98,11 +96,14 @@ classdef VaccinationRestriction
                 out = zeros(Groups.m,1);
                 bTot = 0;
                 for i = order
-                    disp(i);
                     a = min(maxVacc - bTot, N(i) * obj.Efficacy);
                     out(i) = a;
                     bTot = bTot + a;
                 end
+                
+                % Create the VaccinationStrategy object and return the
+                % result.
+                out = lib.classes.VaccinationStrategy(Groups, out);
                 return
             end
             
@@ -125,6 +126,9 @@ classdef VaccinationRestriction
                     bTot = bTot + a;
                 end
             end
+            
+            % Create the VaccinationStrategy object and return the result.
+            out = lib.classes.VaccinationStrategy(Groups, out);
             
         end
     end
