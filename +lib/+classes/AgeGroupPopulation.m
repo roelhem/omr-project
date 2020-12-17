@@ -82,5 +82,16 @@ classdef AgeGroupPopulation < lib.classes.AgeGroup
             out = O * V;
         end
     end
+    
+    %% Dependent properties
+    properties(Dependent)
+        PopulationTotal double
+    end
+    
+    methods
+        function out = get.PopulationTotal(obj)
+            out = sum(obj.Population);
+        end
+    end
 end
 
