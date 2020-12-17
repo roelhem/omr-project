@@ -1,4 +1,4 @@
-function [S,I,R,V] = SIRV_EulerForward(Szero,Izero,Rzero,Vzero,beta,alpha,nu,dt,n)
+function [S,I,R,V] = SIRV_EulerForward(Szero,Izero,Rzero,Vzero,beta,alpha,VaccinationFrac,dt,n)
 %SIRV_EULERFORWARD Runs the simple SIRV-model using the Euler Forward method.
 %   It will always start at `t=0`.
 
@@ -15,8 +15,8 @@ assert(length(Vzero) == m, 'Vzero has incompatible amount of groups.');
 beta  = lib.utils.asParamMat(beta, m);
 alpha = lib.utils.asParamMat(alpha, m);
 % Checking the nu function.
-assert(height(nu) == m, 'nu has incompatible amount of groups.');
-assert(width(nu) == n, 'nu has incompatible amount of steps.');
+assert(height(VaccinationFrac) == m, 'VaccinationFrac has incompatible amount of groups.');
+assert(width(VaccinationFrac) == n, 'VaccinationFrac has incompatible amount of steps.');
 
 %% Allocating memory for the result.
 S = zeros(m, n);
@@ -24,6 +24,8 @@ I = zeros(m, n);
 R = zeros(m, n);
 V = zeros(m, n);
 
+U = zeros(m, n);
+nu = zeros(m, n);
 %% Initial conditions.
 S(:,1) = Szero;
 I(:,1) = Izero;
@@ -31,8 +33,13 @@ R(:,1) = Rzero;
 V(:,1) = Vzero;
 
 
+
 %% Reccursively computing the values.
 for i = 1:n-1
+    % Calculating U and nu
+    U(:,i) = S(:,i) + I(:,i) + R(:,i);
+    nu(:,i) = VaccinationFrac(:,i) .* N ./ U(:,i);
+    
     % Getting the transmission between groups.
     StoI = (beta * I(:,i) ./ N) .* S(:,i);
     ItoR = alpha * I(:,i);
