@@ -100,6 +100,8 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                    % group.
         Tau        % [m x 1] The average length of time for which an infected 
                    % individual remains infectious to others.
+        Rho        % [m x 1] The amount of people that we are planning to
+                   %         vaccinate in group j per day.
         C          % [m x m] The contact matrix, which is the chance that
         P_CtoI     % [m x m] The probability that a contact between an infected
                    % individual and a susceptible individual will lead to a
@@ -196,6 +198,14 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                 error('Tau has wrong size.');
             end
             obj.Alpha = 1 ./ value;
+        end
+        
+        function out = get.Rho(obj)
+            out = obj.Nu .* obj.U;
+        end
+        
+        function obj = set.Rho(obj, value)
+            obj.Nu = value ./  obj.U;
         end
         
         function out = get.C(obj)
@@ -363,6 +373,23 @@ classdef ModelState < lib.classes.AgeGroupPopulation
     
     %% Loading from datasources.
     methods
+        function obj = loadVaccinationStrategy(obj, Strategy, TimeStep)
+            % Initialize the strategy if nessicary.
+            if ~isa(Strategy, 'lib.classes.VaccinationStrategy')
+                if nargin < 3
+                    TimeStep = days(1);
+                end
+                Strategy = lib.classes.VaccinationStrategy(obj, Stategy, TimeStep);
+            end
+            
+            % Retime and set strategy to the time of this ModelState.
+            v = Strategy.retime(obj.T);
+            v.InitialV = obj.V;
+            
+            % Set the Rho of this ModelState.
+            obj.Rho = v.Rho(:,1);
+        end
+        
         function obj = loadContactMatrix(obj, filename)
             obj.C = lib.conversions.contactMatrix(...
                 filename,...
@@ -403,24 +430,65 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
     end
     
-    %% Running the model.
+    %% Variable conversions.
     methods
+        function out = toVaccinationStrategy(obj)
+            out = lib.classes.VaccinationStrategy( ...
+                obj, ...
+                obj.Rho, ...
+                obj.T ...
+            );
+            out.InitialV = obj.V;
+        end
         
-        function result = run(obj, DeltaT, n, Method)
-            % RUN Runs the model and return a `ModelResult instance`.
+        function out = toModelResult(obj, DeltaT, Method)
+            % Get the default variables.
+            if nargin <= 2
+                DeltaT = 1;
+            end
             if nargin <= 3
                 Method = "EulerForward";
             end
             
+            % Return the ModelResult.
+            out = lib.classes.ModelResult( ...
+                obj, ...
+                DeltaT, ...
+                Method ...
+            );
+        end
+    end
+    
+    %% Running the model.
+    methods
+        
+        function result = run(obj, DeltaT, n, Method, VaccinationStrategy)
+            % RUN Runs the model and return a `ModelResult instance`.
+            
+            % Set default argument values.
+            if nargin <= 3
+                Method = "EulerForward";
+            end
+            if nargin <= 4
+                VaccinationStrategy = obj.toVaccinationStrategy();
+            end
+            
+            % Check input arguments.
+            assert(isa(VaccinationStrategy, 'lib.classes.VaccinationStrategy'), 'Invalid Vaccination strategy')
             assert(DeltaT > 0, 'DeltaT has to be bigger than 0');
             assert(n > 0, 'n has to be bigger than 0');
+            
+            % Get Nu
+            dt_days = days(DeltaT);
+            T_end = obj.T + dt_days * (n - 1);
+            nu = VaccinationStrategy.retime(obj.T:dt_days:T_end).Nu;
             
             % Run the model with the chosen method.
             switch string(Method)
                 case "EulerForward"
-                    [SRes, IRes, RRes] = obj.run_EulerForward(DeltaT, n);
+                    [SRes, IRes, RRes] = obj.run_EulerForward(DeltaT, n, nu);
                 case "EulerBackward"
-                    [SRes, IRes, RRes] = obj.run_EulerBackward(DeltaT, n);
+                    [SRes, IRes, RRes] = obj.run_EulerBackward(DeltaT, n, nu);
                 otherwise
                     error(strcat("Method '", string(Method), "' not recognised/implemented."));
             end
@@ -428,10 +496,11 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             % Create the state vector.
             State(1:n) = obj;
             for i = 1:n
-                State(i).T = obj.T + days(DeltaT * (i - 1));
-                State(i).S = SRes(:,i);
-                State(i).I = IRes(:,i);
-                State(i).R = RRes(:,i);
+                State(i).T  = obj.T + days(DeltaT * (i - 1));
+                State(i).S  = SRes(:,i);
+                State(i).I  = IRes(:,i);
+                State(i).R  = RRes(:,i);
+                State(i).Nu = nu(:,i);
             end
             
            
@@ -467,9 +536,13 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             result.R = RRes(:,2);
         end
         
-        function [S,I,R,V] = run_EulerForward(obj, DeltaT, n)
+        function [S,I,R,V] = run_EulerForward(obj, DeltaT, n, nu)
             % RUN_EULERFORWARD Runs the model using the EulerForward
             %                  numeric method.
+            if nargin < 4 || isempty(nu)
+                nu = [obj.Nu, zeros(obj.m, n - 1)];
+            end
+            
             [SRes,IRes,RRes,VRes] = lib.models.SIRV_EulerForward(...
                 obj.S,...
                 obj.I,...
@@ -477,7 +550,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                 obj.V,...
                 obj.Beta,...
                 obj.Alpha,...
-                [obj.Nu, zeros(obj.m, n - 1)],...
+                nu,...
                 DeltaT,...
                 n...
             );
@@ -488,9 +561,13 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             V = VRes;
         end
         
-        function [S,I,R,V] = run_EulerBackward(obj, DeltaT, n)
+        function [S,I,R,V] = run_EulerBackward(obj, DeltaT, n, nu)
             % RUN_EULERBACKWARD Runs the model using the EulerBackward
             %                   numeric method.
+            if nargin < 4 || isempty(nu)
+                nu = [obj.Nu, zeros(obj.m, n - 1)];
+            end
+            
             [SRes,IRes,RRes,VRes] = lib.models.SIRV_EulerBackward(...
                 obj.S,...
                 obj.I,...
@@ -498,7 +575,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                 obj.V,...
                 obj.Beta,...
                 obj.Alpha,...
-                zeros(obj.m, n),...
+                nu,...
                 DeltaT,...
                 n...
             );

@@ -13,6 +13,8 @@ Method = "EulerForward";
 n = 100;
 AgeGroups = lib.classes.ModelState.STD_Boundaries;
 ContactMatrixFile = 'Contact_matrix.csv';
+VaccinationStrategy = [];
+VaccinationStrategyTimeStep = 1;
 for ii = 1:2:length(varargin)
     switch string(varargin{ii})
         case "StartDate"
@@ -27,6 +29,10 @@ for ii = 1:2:length(varargin)
             AgeGroups = varargin{ii + 1};
         case "ContactMatrixFile"
             ContactMatrixFile = varargin{ii + 1};
+        case "VaccinationStrategy"
+            VaccinationStrategy = varargin{ii + 1};
+        case "VaccinationStrategyTimeStep"
+            VaccinationStrategyTimeStep = varargin{ii + 1};
     end
 end
 
@@ -51,8 +57,8 @@ for ii = 1:2:length(varargin)
             InitialState.I = varargin{ii + 1};
         case "R"
             InitialState.R = varargin{ii + 1};
-        case "Nu"
-            InitialState.Nu = varargin{ii + 1};
+        case "V"
+            InitialState.V = varargin{ii + 1};
         case "Alpha"
             InitialState.Alpha = varargin{ii + 1};
         case "Tau"
@@ -64,8 +70,24 @@ for ii = 1:2:length(varargin)
     end
 end
 
+% Get the vaccination strategy.
+if isempty(VaccinationStrategy)
+    VaccinationStrategy = InitialState.toVaccinationStrategy();
+elseif isa(VaccinationStrategy, 'lib.classes.VaccinationStrategy')
+    VaccinationStrategy.InitialV = InitialState.V;
+elseif isnumeric(VaccinationStrategy)
+    VaccinationStrategy = lib.classes.VaccinationStrategy( ...
+        InitialState, ...
+        VaccinationStrategy, ...
+        VaccinationStrategyTimeStep ...
+    );
+end
+
 % Run the model to get an undated result.
-UndatedResult = InitialState.run(DeltaT, n, Method);
+UndatedResult = InitialState.run(DeltaT, n, ...
+    Method, ...
+    VaccinationStrategy ...
+);
 
 % Get the result with dates.
 M = UndatedResult.toDatedModelResult(StartDate);

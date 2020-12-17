@@ -6,7 +6,7 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
     
     %% Initialisation
     methods
-        function obj = VaccinationStrategy(scale, Rho, TimeStep)
+        function obj = VaccinationStrategy(scale, Rho, T)
             %VACCINATIONSTRATEGY Creates a new instance of this vaccination
             %   strategy.
             assert(isa(scale, 'lib.classes.AgeGroupPopulation'));
@@ -20,7 +20,7 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
                 Rho = zeros(obj.m, 0);
             end
             if nargin < 3
-                TimeStep = days(1);
+                T = days(1);
             end
             
             % Initialize the timetable
@@ -29,11 +29,22 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
                 obj.TTable = Rho;
             else
                 assert(height(Rho) == obj.m);
-                obj.TTable = timetable( ...
-                    'Size', [width(Rho) obj.m], ...
-                    'VariableTypes', repmat("double", obj.m, 1), ...
-                    'TimeStep', TimeStep ...
-                );
+                if width(Rho) == size(T)
+                    obj.TTable = timetable( ...
+                        'Size', [width(Rho) obj.m], ...
+                        'VariableTypes', repmat("double", obj.m, 1), ...
+                        'RowTimes', days(T) ...
+                    );
+                elseif size(T) == 1
+                    obj.TTable = timetable( ...
+                        'Size', [width(Rho) obj.m], ...
+                        'VariableTypes', repmat("double", obj.m, 1), ...
+                        'TimeStep', days(T) ...
+                    );
+                else
+                    error('Invalid Time vector.');
+                end
+                
                 obj.TTable{:,:} = Rho';
             end
             
@@ -212,13 +223,15 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
         
         function result = retime(obj, NewT)
             % Get the new length of datapoints.
-            NewT = days(NewT);
+            if isduration(NewT)
+                NewT = NewT/days(1);
+            end
             New_n = length(NewT);
             
             % Compute the new Rho.
             NewRho = zeros(obj.m, New_n);
             for i = 1:New_n
-                d = days(floor(NewT(i) / days(1)));
+                d = days(floor(NewT(i)));
                 v = obj.DailyTable{d, :}';
                 if ~isempty(v)
                     NewRho(:,i) = v;
@@ -232,7 +245,7 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
             result = obj;
             result.InitialV = NewInitialV;
             result.TTable = array2timetable(NewRho', ...
-                'RowTimes', NewT, ...
+                'RowTimes', days(NewT), ...
                 'VariableNames', obj.GroupName ...
             );
         end
