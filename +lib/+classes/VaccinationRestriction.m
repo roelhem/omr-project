@@ -70,6 +70,18 @@ classdef VaccinationRestriction
         end
     end
     
+    %% Helper methods
+    methods
+        function out = vaccUpperBound(obj, Groups)
+            % Get some kind of upper bound for the init of out.
+            out = min(Groups.PopulationTotal * obj.Efficacy, obj.EffTotalMax);
+        end
+        function out = expectedDays(obj, Groups)
+            % Get some kind of upper bound for the init of out.
+            out = ceil(obj.vaccUpperBound(Groups) / obj.EffMaxPerDay);
+        end
+    end
+    
     %% Strategy generator.
     methods
         function out = generateOrderStrategy(obj, Groups, order)
@@ -85,7 +97,7 @@ classdef VaccinationRestriction
             end
             
             % Get some kind of upper bound for the init of out.
-            maxVacc = min(Groups.PopulationTotal * obj.Efficacy, obj.EffTotalMax);
+            maxVacc = obj.vaccUpperBound(Groups);
             
             % Alias the population, for better readability.
             N = Groups.Population;
@@ -109,7 +121,7 @@ classdef VaccinationRestriction
             
             % Get the maximum amount of days that the vaccination plan
             % might take, for initializing the result.
-            maxDays = ceil(maxVacc / obj.EffMaxPerDay);
+            maxDays = obj.expectedDays(Groups);
             
             % Initialize the results.
             out = zeros(Groups.m, maxDays);

@@ -209,13 +209,13 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
         
         function out = get.C(obj)
-            out = diag(1 ./ obj.SusVect) * obj.Beta;
+            out = obj.Beta * diag(1 ./ obj.SusVect);
         end
         
         function obj = set.C(obj, value)
             assert(width(value) == obj.m);
             assert(height(value) == obj.m);
-            obj.Beta = value * diag(obj.SusVect);
+            obj.Beta =  diag(obj.SusVect) * value;
         end
         
         function out = get.P_CtoI(obj)
@@ -474,7 +474,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             end
             
             % Check input arguments.
-            assert(isa(VaccinationStrategy, 'lib.classes.VaccinationStrategy'), 'Invalid Vaccination strategy')
+            assert(isa(VaccinationStrategy, 'lib.classes.VaccinationStrategy'), 'Invalid Vaccination strategy.');
             assert(DeltaT > 0, 'DeltaT has to be bigger than 0');
             assert(n > 0, 'n has to be bigger than 0');
             
