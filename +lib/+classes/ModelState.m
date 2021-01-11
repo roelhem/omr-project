@@ -371,6 +371,62 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
     end
     
+    %% Function handles.
+    properties(Dependent)
+        vacc_vectorized_run function_handle
+        vacc_run function_handle
+    end
+    
+    methods
+        function M = getModelResult(obj, S_res, I_res, U_res, Nu_res)
+            % Get the sizes.
+            n = size(S_res,3);
+            R_res = U_res - (S_res + I_res);
+
+            % Get the states.
+            State(1:n) = obj;
+            for j = 1:n
+                State(j).T(:) = obj.T + days(j - 1);
+                State(j).S(:,:) = S_res(1,:,j);
+                State(j).I(:,:) = I_res(1,:,j);
+                State(j).R(:,:) = R_res(1,:,j);
+                State(j).Nu(:,:) = Nu_res(1,:,j);
+            end
+            
+            % Get the results.
+            M = lib.classes.ModelResult(State, 1, "EulerForward");
+        end
+        
+        function out = get.vacc_vectorized_run(obj)
+            vectorized_fcn = lib.models.SIRV_EulerForward_vectorized(obj);
+            
+            function result = f(x)
+                [S_res,I_res,U_res,StoI_res,Nu_res] = vectorized_fcn(x);
+                
+                p = size(S_res, 1);
+                
+                result = struct( ...
+                    'p', p, ...
+                    'S', S_res, ...
+                    'I', I_res, ...
+                    'U', U_res, ...
+                    'StoI', StoI_res, ...
+                    'Nu', Nu_res, ...
+                    'getModelResult', @(i)obj.getModelResult(S_res(i,:,:), I_res(i,:,:), U_res(i,:,:),Nu_res(i,:,:)) ...
+                );
+            end
+            
+            out = @f;
+            
+        end
+        
+        function out = get.vacc_run(obj)
+            aa = lib.models.SIRV_EulerForward_vectorized(obj);
+            out = @(x)aa(x');
+        end
+    end
+    
+    
     %% Loading from datasources.
     methods
         function obj = loadVaccinationStrategy(obj, Strategy, TimeStep)

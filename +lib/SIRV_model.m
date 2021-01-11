@@ -8,69 +8,38 @@ if nargin < 1
 end
 
 % Get the optional arguments.
-StartDate = datetime() - calmonths(1);
 Method = "EulerForward";
 n = 100;
-AgeGroups = lib.classes.ModelState.STD_Boundaries;
-ContactMatrixFile = 'Contact_matrix.csv';
+StartDate = datetime() - calmonths(1);
 VaccinationStrategy = [];
 VaccinationStrategyTimeStep = 1;
+InitialState = [];
 for ii = 1:2:length(varargin)
     switch string(varargin{ii})
-        case "StartDate"
-            StartDate = varargin{ii + 1};
         case "Method"
             Method = varargin{ii + 1};
         case "Steps"
             n = varargin{ii + 1};
+        case "StartDate"
+            StartDate = varargin{ii + 1};
         case "n"
             n = varargin{ii + 1};
-        case "AgeGroups"
-            AgeGroups = varargin{ii + 1};
-        case "ContactMatrixFile"
-            ContactMatrixFile = varargin{ii + 1};
         case "VaccinationStrategy"
             VaccinationStrategy = varargin{ii + 1};
         case "VaccinationStrategyTimeStep"
             VaccinationStrategyTimeStep = varargin{ii + 1};
+        case "InitialState"
+            InitialState = varargin{ii + 1};
     end
 end
 
 
-% Get the initial state.
-InitialState  = lib.classes.ModelState.standardData( ...
-    StartDate, ...
-    AgeGroups, ...
-    ContactMatrixFile ...
-);
-
-% Modifying the initial state.
-for ii = 1:2:length(varargin)
-    switch string(varargin{ii})
-        case "SympRatio"
-            InitialState.SympRatio = varargin{ii + 1};
-        case "AsympRatio"
-            InitialState.AsympRatio = varargin{ii + 1};
-        case "S"
-            InitialState.S = varargin{ii + 1};
-        case "I"
-            InitialState.I = varargin{ii + 1};
-        case "R"
-            InitialState.R = varargin{ii + 1};
-        case "V"
-            InitialState.V = varargin{ii + 1};
-        case "Alpha"
-            InitialState.Alpha = varargin{ii + 1};
-        case "Tau"
-            InitialState.Tau = varargin{ii + 1};
-        case "ReprNum"
-            InitialState.ReprNum = varargin{ii + 1};
-        case "ReprEff"
-            InitialState.ReprEff = varargin{ii + 1};
-    end
+% Get the default initial state
+if isempty(InitialState)
+    InitialState = lib.SIRV_initial(varargin{:});
 end
 
-% Get the vaccination strategy.
+% Get the vaccination strategy.]
 if isempty(VaccinationStrategy)
     VaccinationStrategy = InitialState.toVaccinationStrategy();
 elseif isa(VaccinationStrategy, 'lib.classes.VaccinationStrategy')
