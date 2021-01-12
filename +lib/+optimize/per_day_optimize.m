@@ -26,8 +26,6 @@ function [VS, score] = per_day_optimize(OptProblem, varargin)
     
     %% Initialisation.
     
-    disp('=> INITIALISING THE DIFFERENTIAL EVOLUTION ALGORITM...');
-    
     % Aliases
     n = OptProblem.days;
     p = PopulationSize;
@@ -66,19 +64,17 @@ function [VS, score] = per_day_optimize(OptProblem, varargin)
     for day = 1:n
         
         % Output the progress.
-        disp(['=> OPTIMISING DAY ' num2str(day)]);
         
         % Compute the amount of available vaccines.
         maxvacc = min(OptProblem.VaccinationRestriction.EffMaxPerDay, sum(N_left));
         if maxvacc < tol
-            disp([' --> [TERMINADED] All available vaccines used. ' num2str(day)]);
             break;
         end
         
         %% Differential evolution algorithm
         
         % Get the fitness function.
-        [fitnessfcn, change_indices] = lib.utils.getPartialFitnessFunc([result_input, zeros(1,m*40)], day, m, base_fitnessfcn);
+        [fitnessfcn, change_indices] = lib.utils.getPartialFitnessFunc(result_input, day, m, base_fitnessfcn);
         
         % Get the initial population.
         Population(:,:) = lib.utils.randomVaccDist(N_left, maxvacc, p, tol);

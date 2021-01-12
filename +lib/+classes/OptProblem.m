@@ -226,6 +226,32 @@ classdef OptProblem
                 
             end
             
+            function MutatedChildren = mut_swap(parents, options, nvars, FitnessFcn, state, thisScore, thisPopulation)
+                MutatedChildren = thisPopulation(parents,:);
+        
+                ps = height(parents);
+                for i = 1:ps
+                    parent = obj.input2stratmat(thisPopulation(parents(i), :));
+                    available_days = sum(sum(parent, 1) > 1e-5);
+                    
+                    swap_size = randi([1 randi(6)]);
+                    a = randi([swap_size+1, available_days - swap_size + 1]);
+                    b = randi([1, a - swap_size]);
+                    a = a:a+swap_size-1;
+                    b = b:b+swap_size-1;
+                    temp = parent(:, a);
+                    parent(:, a) = parent(:, b);
+                    parent(:, b) = temp;
+                    MutatedChildren(i,:) = obj.stratmat2input(parent);
+                    
+%                     I_a = (1:obj.m) + (swap_vals(1) - 1)*obj.m;
+%                     I_b = (1:obj.m) + (swap_vals(2) - 1)*obj.m;
+%                     temp = MutatedChildren(psi, I_a);
+%                     MutatedChildren(psi, I_a) = MutatedChildren(psi, I_b);
+%                     MutatedChildren(psi, I_b) = temp;
+                end
+            end
+            
             function MutatedChildren = mut_dist(parents, options, nvars, FitnessFcn, state, thisScore, thisPopulation)
                 MutatedChildren = thisPopulation(parents,:);
                 
@@ -298,13 +324,8 @@ classdef OptProblem
         
         function out = get.CreationFcn(obj)
             
-            function Population = f(GenomeLength)
-                Population = obj.strategy2input(...
-                    obj.VaccinationRestriction.generateFullStrategy(...
-                        obj.InitialState, ...
-                        GenomeLength / obj.m ...
-                    )...
-                );
+            function Population = f(GenomeLength, FitnessFcn, options)
+                Population = obj.getRandomOrderStrategies(40);
             end
             
             out = @f;
@@ -472,6 +493,7 @@ classdef OptProblem
                 'FunctionTolerance', FunctionTolerance, ...
                 'MaxGenerations', MaxGenerations, ...
                 'CrossoverFcn', {@crossoverintermediate, 1}, ...
+                'CreationFcn', obj.CreationFcn, ...
                 'MutationFcn', obj.MutationFcn, ...
                 'MaxStallGenerations', MaxStallGenerations, ...
                 'EliteCount', EliteCount, ...
@@ -560,17 +582,34 @@ classdef OptProblem
             x = x(I,:);
         end
         
-        function [res, fval, exitflag, output, population, scores, x] = getOptimalStrategy(obj, varargin)
+        function [res, fval, exitflag, output, population, scores, x] = runGeneticAlgorithm(obj, varargin)
             [x, fval, exitflag, output, population, scores] = ga(obj.getProblem(varargin{:}));
             res = lib.classes.VaccinationStrategy( ...
                 obj.InitialState, ...
                 obj.input2stratmat(x) ...
             );
         end
+        
+        function [VS, score] = runDifferentialEvolution(obj, varargin)
+            [VS, score] = lib.optimize.per_day_optimize(obj, varargin{:});
+        end
     end
     
-    %% Differential evolution
+    %% Getting the state.
     methods
+        
+        function MR = getResult(obj, VS)
+            if nargin < 2
+                VS = [];
+            end
+            
+            MR = lib.SIRV_model(obj.DeltaT, ...
+                'Method', obj.Method, ...
+                'Steps', obj.Steps, ...
+                'InitialState', obj.InitialState, ...
+                'VaccinationStrategy', VS ...
+            );
+        end
         
     end
     
