@@ -144,5 +144,24 @@ classdef AgeGroup
         end
     end
     
+    %% Plots (and plot helpers)
+    methods
+        function out = getGroupLabels(obj, prefix, suffix)
+            if nargin < 2
+                prefix = '';
+            end
+            
+            if nargin < 3
+                suffix = '';
+            end
+            
+            out = repmat("", obj.m, 1);
+            for i = 1:obj.m
+                out(i) = strcat(prefix, obj.GroupName(i), suffix);
+            end
+            
+        end
+    end
+    
 end
 

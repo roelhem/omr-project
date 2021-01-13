@@ -192,7 +192,11 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
     %% Plotting the vaccination strategy.
     methods
         function out = plotArea(obj)
-            out = area(obj.T, obj.Rho');
+            out = area(obj.T, obj.Rho' ...
+            );
+            colororder(jet(obj.m));
+            ylabel('Amount of people per day');
+            legend(obj.GroupCategory);
         end
         
         function out = plotLine(obj)

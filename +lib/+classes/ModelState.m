@@ -673,5 +673,59 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             );
         end
     end
+    
+    %% Plots
+    methods
+        function h = plotHeatMap(obj, varargin)
+            par = gcf;
+            
+            Data = "Beta"; % "C" "P_CtoI"
+            Title = [];
+            XLabel = "Transmitting Group";
+            YLabel = "Receiving Group";
+            
+            for ii = 1:2:length(varargin)
+                switch string(varargin{ii})
+                    case "Data"
+                        Data = varargin{ii + 1};
+                    case "XLabel"
+                        XLabel = varargin{ii + 1};
+                    case "YLabel"
+                        YLabel = varargin{ii + 1};
+                end
+            end
+            
+            values = obj.GroupName;
+            
+            % Getting the heatmap.
+            switch string(Data)
+                case "Beta"
+                    h = heatmap(par, values, values, obj.Beta);
+                case "C"
+                    h = heatmap(par, values, values, obj.C);
+                case "P_CtoI"
+                    h = heatmap(par, values, values, obj.P_CtoI);
+                otherwise
+                    error(strcat("Doesn't recognise data '", Data, "'."));
+            end
+            
+            if ~isempty(Title)
+                h.Title = Title;
+            else
+                switch string(Data)
+                    case "Beta"
+                        h.Title = "Values of \beta";
+                    case "C"
+                        h.Title = "Contact matrix (Adjusted for R_0)";
+                    case "P_CtoI"
+                        h.Title = "P_{C \to I}";
+                end
+            end
+            
+            h.XLabel = XLabel;
+            h.YLabel = YLabel;
+            
+        end
+    end
 end
 

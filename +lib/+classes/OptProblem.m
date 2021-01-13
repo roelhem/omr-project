@@ -11,6 +11,7 @@ classdef OptProblem
         DeltaT                 double
         Method                 string
         Steps                  double
+        StartDate              datetime
     end
     
     methods
@@ -23,6 +24,7 @@ classdef OptProblem
             obj.DeltaT = 1;
             obj.Steps = [];
             obj.Method = 'EulerForward';
+            obj.StartDate = datetime('2021-01-01');
             
             % Setting variables from varargin.
             for ii = 1:2:length(varargin)
@@ -41,6 +43,8 @@ classdef OptProblem
                         else
                             obj.CostFuncParams = varargin(ii+1);
                         end
+                    case "StartDate"
+                        obj.StartDate = varargin{ii + 1};
                     case "InitialState"
                         obj.InitialState = varargin{ii + 1};
                 end
@@ -265,14 +269,15 @@ classdef OptProblem
                     
                     % maximum change.
                     delta = unifrnd(0, max_change);
+                    exp_days = obj.VaccinationRestriction.expectedDays(obj.InitialState);
                     
                     % Add distribution.
-                    add_mu = unifrnd(1, obj.days);
+                    add_mu = unifrnd(1, exp_days);
                     add_sigma = unifrnd(0.2, 5);
                     add_dist = normpdf(1:obj.days, add_mu, add_sigma);
                     
                     % Compensate distribution.
-                    cmp_mu = unifrnd(1, obj.days);
+                    cmp_mu = unifrnd(1, exp_days);
                     cmp_sigma = unifrnd(5, 10);
                     cmp_dist = normpdf(1:obj.days, cmp_mu, cmp_sigma);
                     
@@ -325,7 +330,7 @@ classdef OptProblem
         function out = get.CreationFcn(obj)
             
             function Population = f(GenomeLength, FitnessFcn, options)
-                Population = obj.getRandomOrderStrategies(40);
+                Population = obj.getRandomOrderStrategies(400);
             end
             
             out = @f;
@@ -416,6 +421,7 @@ classdef OptProblem
                 obj.getRandomOrderStrategies(InitRandomOrderStrategies)
                 obj.getRandomFullStrategies(InitRandomFullStrategies)
             ];
+            disp(size(P));
         end
         
         function out = getOptions(obj, varargin)
@@ -478,7 +484,7 @@ classdef OptProblem
             if isempty(EliteCount)
                 EliteCount = ceil(0.05 * PopulationSize);
             end
-            
+           
             
             % Create options.
             out = optimoptions('ga', ...
@@ -493,7 +499,7 @@ classdef OptProblem
                 'FunctionTolerance', FunctionTolerance, ...
                 'MaxGenerations', MaxGenerations, ...
                 'CrossoverFcn', {@crossoverintermediate, 1}, ...
-                'CreationFcn', obj.CreationFcn, ...
+                ...'CreationFcn', obj.CreationFcn, ...
                 'MutationFcn', obj.MutationFcn, ...
                 'MaxStallGenerations', MaxStallGenerations, ...
                 'EliteCount', EliteCount, ...
@@ -606,6 +612,7 @@ classdef OptProblem
             MR = lib.SIRV_model(obj.DeltaT, ...
                 'Method', obj.Method, ...
                 'Steps', obj.Steps, ...
+                'StartDate', obj.StartDate, ...
                 'InitialState', obj.InitialState, ...
                 'VaccinationStrategy', VS ...
             );

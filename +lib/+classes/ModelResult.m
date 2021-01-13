@@ -317,5 +317,12 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
             end
         end
     end
+    
+    %% Plots
+    methods
+        
+        
+        
+    end
 end
 
