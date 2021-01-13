@@ -716,7 +716,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                     case "Beta"
                         h.Title = "Values of \beta";
                     case "C"
-                        h.Title = "Contact matrix (Adjusted for R_0)";
+                        h.Title = strcat("Contacts (Adjusted for R_0 = ", num2str(obj.ReprNum) ,")");
                     case "P_CtoI"
                         h.Title = "P_{C \to I}";
                 end

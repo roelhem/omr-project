@@ -86,7 +86,7 @@ function [VS, score] = per_day_optimize(OptProblem, varargin)
             % MUTATION
             beta = unifrnd(0.2, 0.8, p, m);
             picked = randPermMat(p, 3);
-            y = Population(picked(:,1)) + beta .* (Population(picked(:,2)) - Population(picked(:,3)));
+            y = Population(picked(:,1),:) + beta .* (Population(picked(:,2),:) - Population(picked(:,3),:));
             y = max(0, y);
             y = min(N_left, y);
             
@@ -94,7 +94,8 @@ function [VS, score] = per_day_optimize(OptProblem, varargin)
             z = Population;
             j = repmat(1:m, p, 1) == randi([1 m], p, 1);
             z(j) = y(j);
-            z = z .* (maxvacc ./ max(0, sum(z, 2)));
+            z = z .* (maxvacc ./ sum(z, 2));
+            z = min(N_left, z);
             
             % SELECTION
             z_scores = fitnessfcn(z);
