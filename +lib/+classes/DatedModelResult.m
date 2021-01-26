@@ -2,6 +2,22 @@ classdef DatedModelResult < lib.classes.ModelResult
     %DATEDMODELRESULT A ModelResult that knows from which date the result
     %   was running.
     
+    %% Serialisation
+    %MODELRESULT The results got form a model that run successfully.
+    methods
+        function out = toStruct(obj)
+            out = obj.toStruct@lib.classes.ModelResult();
+            out.StartDate = obj.StartDate;
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            State = arrayfun(@(x)lib.classes.ModelState.fromStruct(x), s.State);
+            out = lib.classes.DatedModelResult(State, s.DeltaT, s.Method, s.StartDate);
+        end
+    end
+    
     %% Initialisation
     properties
         StartDate datetime % [1 x 1] The date from which the model will 

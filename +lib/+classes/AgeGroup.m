@@ -1,7 +1,21 @@
-classdef AgeGroup
+classdef AgeGroup < lib.classes.Serializable
     %AGEGROUP Summary of this class goes here
     %   Detailed explanation goes here
     
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = struct('Boundaries', obj.Boundaries);
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            out = lib.classes.AgeGroup(s.Boundaries);
+        end
+    end
+    
+    %% Initialisation
     properties
         Boundaries
     end

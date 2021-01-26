@@ -1,6 +1,37 @@
 classdef ModelState < lib.classes.AgeGroupPopulation
     %MODELSTATE Manages all the variables of a model at some timestap.
     
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = obj.toStruct@lib.classes.AgeGroupPopulation();
+            out.T = obj.T / days(1);
+            out.S = obj.S;
+            out.I = obj.I;
+            out.R = obj.R;
+            out.Alpha = obj.Alpha;
+            out.Beta = obj.Beta;
+            out.Nu = obj.Nu;
+            out.SusVect = obj.SusVect;
+            out.SympRatio = obj.SympRatio;
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            out = lib.classes.ModelState(s.Boundaries, s.Population);
+            out.T = days(s.T);
+            out.S = s.S;
+            out.I = s.I;
+            out.R = s.R;
+            out.Alpha = s.Alpha;
+            out.Beta = s.Beta;
+            out.Nu = s.Nu;
+            out.SusVect = s.SusVect;
+            out.SympRatio = s.SympRatio;
+        end
+    end
+    
     %% Initialisation methods
     methods
         function obj = ModelState(group, N)
@@ -61,6 +92,13 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             obj = obj.loadInitialValues(D)...
                     .loadContactMatrix(CFile)...
                     .loadReprNumData(D);
+        end
+    end
+    
+    %% Serialisation
+    methods
+        function out = serialize(obj)
+            
         end
     end
     

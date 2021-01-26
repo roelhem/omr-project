@@ -4,6 +4,24 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
     %   allowed by the restrictions and methods to calculate the values
     %   that can be inserted into the SIRV_model.
     
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = obj.toStruct@lib.classes.AgeGroupPopulation();
+            out.Rho = obj.Rho;
+            out.T = obj.T / days(1);
+            out.InitialV = obj.InitialV;
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            scale = lib.classes.AgeGroupPopulation.fromStruct(s);
+            out = lib.classes.VaccinationStrategy(scale, s.Rho, s.T);
+            out.InitialV = s.InitialV;
+        end
+    end
+    
     %% Initialisation
     methods
         function obj = VaccinationStrategy(scale, Rho, T)
@@ -33,13 +51,13 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
                 obj.TTable = Rho;
             else
                 assert(height(Rho) == obj.m);
-                if width(Rho) == size(T)
+                if width(Rho) == length(T)
                     obj.TTable = timetable( ...
                         'Size', [width(Rho) obj.m], ...
                         'VariableTypes', repmat("double", obj.m, 1), ...
                         'RowTimes', T ...
                     );
-                elseif size(T) == 1
+                elseif length(T) == 1
                     obj.TTable = timetable( ...
                         'Size', [width(Rho) obj.m], ...
                         'VariableTypes', repmat("double", obj.m, 1), ...
@@ -191,10 +209,15 @@ classdef VaccinationStrategy < lib.classes.AgeGroupPopulation
     
     %% Plotting the vaccination strategy.
     methods
-        function out = plotArea(obj)
-            out = area(obj.T, obj.Rho' ...
-            );
+        function out = plotArea(obj, StartDate)
             colororder(jet(obj.m));
+            
+            if nargin < 2
+                out = area(obj.T, obj.Rho');
+            else
+                area(StartDate + obj.T, obj.Rho');
+            end
+            
             ylabel('Amount of people per day');
             legend(obj.GroupCategory);
         end

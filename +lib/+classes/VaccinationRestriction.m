@@ -1,5 +1,28 @@
-classdef VaccinationRestriction
+classdef VaccinationRestriction < lib.classes.Serializable
     %VACCINATIONRESTRICTION Contains the restrictions on a certain vaccin.
+    
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = struct(...
+                'VaccineEfficacy', obj.Efficacy, ...
+                'MaxVaccinesPerDay', obj.MaxPerDay, ...
+                'MaxVaccinesTotal', obj.TotalMax, ...
+                'ConstraintTolerance', obj.ConstraintTolerance ...
+            );
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            out = lib.classes.VaccinationRestriction(...
+                'VaccineEfficacy', s.VaccineEfficacy, ...
+                'MaxVaccinesPerDay', s.MaxVaccinesPerDay, ...
+                'MaxVaccinesTotal', s.MaxVaccinesTotal, ...
+                'Tolerance', s.ConstraintTolerance ...
+            );
+        end
+    end
     
     %% Initialisation
     
@@ -259,6 +282,7 @@ classdef VaccinationRestriction
             out = lib.classes.VaccinationStrategy(Groups, out);
             
         end
+       
     end
 end
 

@@ -1,6 +1,36 @@
-classdef OptProblem
+classdef OptProblem < lib.classes.Serializable
     %OPTPROBLEM Holds all the parameters for an optimisation problem.
     
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = struct(...
+                'InitialState', obj.InitialState.toStruct(), ...
+                'VaccinationRestriction', obj.VaccinationRestriction.toStruct(), ...
+                'CostFunc', obj.CostFunc, ...
+                'CostFuncParams', {obj.CostFuncParams}, ...
+                'DeltaT', obj.DeltaT, ...
+                'Method', obj.Method, ...
+                'Steps', obj.Steps, ...
+                'StartDate', obj.StartDate ...
+            );
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            out = lib.classes.OptProblem(...
+                'InitialState', lib.classes.ModelState.fromStruct(s.InitialState), ...
+                'VaccinationRestriction', lib.classes.VaccinationRestriction.fromStruct(s.VaccinationRestriction), ...
+                'CostFunc', s.CostFunc, ...
+                'CostFuncParams', s.CostFuncParams, ...
+                'DeltaT', s.DeltaT, ...
+                'Method', s.Method, ...
+                'Steps', s.Steps, ...
+                'StartDate', s.StartDate ...
+            );
+        end
+    end
     
     %% Initialisation
     properties
@@ -59,7 +89,7 @@ classdef OptProblem
     end
     
     %% Dependend properties
-    properties
+    properties(Dependent)
         N double
         m double
         days double
@@ -588,6 +618,50 @@ classdef OptProblem
             x = x(I,:);
         end
         
+        function [res, fval, x] = runOrderStrategy(obj, perm)
+            
+            if nargin < 2 || isempty(perm)
+                perm = flip(1:obj.m);
+            end
+            
+            res = obj.VaccinationRestriction.generateOrderStrategy(obj.InitialState, perm, obj.days);
+            x = obj.strategy2input(res)';
+            fval = obj.fitnessfcn(x);
+        end
+        
+        function [res, fval, x] = runRandomStrategy(obj)
+            
+            res = obj.VaccinationRestriction.generateFullStrategy(obj.InitialState, obj.days);
+            x = obj.strategy2input(res)';
+            fval = obj.fitnessfcn(x);
+        end
+        
+        function [res, fval, x] = runUniformStrategy(obj)
+            
+            res = obj.VaccinationRestriction.generateUniformStrategy(obj.InitialState, obj.days);
+            x = obj.strategy2input(res)';
+            fval = obj.fitnessfcn(x);
+        end
+        
+        function [res, fval, x] = runEmptyStrategy(obj)
+            x = zeros(1, obj.nvars);
+            fval = obj.fitnessfcn(x);
+            res = obj.input2strategy(x);
+        end
+        
+        function [res, fval, perm, x] = runBestOrder(obj)
+            disp('=> Getting the best order strategy.');
+            
+            [x, perm, fval] = obj.getOrderStrategies();
+            
+            x = x(1,:);
+            perm = perm(1,:);
+            fval = fval(1);
+            
+            res = obj.input2strategy(x);
+            
+        end
+        
         function [res, fval, exitflag, output, population, scores, x] = runGeneticAlgorithm(obj, varargin)
             [x, fval, exitflag, output, population, scores] = ga(obj.getProblem(varargin{:}));
             res = lib.classes.VaccinationStrategy( ...
@@ -620,5 +694,20 @@ classdef OptProblem
         
     end
     
+    %% Plots
+    properties(Dependent)
+        CostLabel
+    end
+    
+    methods
+        function out = get.CostLabel(obj)
+            switch string(obj.CostFunc)
+                case "total_deaths"
+                    out = "Total Amount of Deaths";
+                otherwise
+                    out = "";
+            end
+        end
+    end
 end
 
