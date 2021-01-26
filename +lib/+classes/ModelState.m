@@ -1,6 +1,37 @@
 classdef ModelState < lib.classes.AgeGroupPopulation
     %MODELSTATE Manages all the variables of a model at some timestap.
     
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = obj.toStruct@lib.classes.AgeGroupPopulation();
+            out.T = obj.T / days(1);
+            out.S = obj.S;
+            out.I = obj.I;
+            out.R = obj.R;
+            out.Alpha = obj.Alpha;
+            out.Beta = obj.Beta;
+            out.Nu = obj.Nu;
+            out.SusVect = obj.SusVect;
+            out.SympRatio = obj.SympRatio;
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            out = lib.classes.ModelState(s.Boundaries, s.Population);
+            out.T = days(s.T);
+            out.S = s.S;
+            out.I = s.I;
+            out.R = s.R;
+            out.Alpha = s.Alpha;
+            out.Beta = s.Beta;
+            out.Nu = s.Nu;
+            out.SusVect = s.SusVect;
+            out.SympRatio = s.SympRatio;
+        end
+    end
+    
     %% Initialisation methods
     methods
         function obj = ModelState(group, N)
@@ -64,6 +95,13 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
     end
     
+    %% Serialisation
+    methods
+        function out = serialize(obj)
+            
+        end
+    end
+    
     %% Standard Data.
     properties(Constant)
         STD_Boundaries = lib.utils.createGroupBoundaries(10, 70);
@@ -100,6 +138,8 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                    % group.
         Tau        % [m x 1] The average length of time for which an infected 
                    % individual remains infectious to others.
+        Rho        % [m x 1] The amount of people that we are planning to
+                   %         vaccinate in group j per day.
         C          % [m x m] The contact matrix, which is the chance that
         P_CtoI     % [m x m] The probability that a contact between an infected
                    % individual and a susceptible individual will lead to a
@@ -198,14 +238,22 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             obj.Alpha = 1 ./ value;
         end
         
+        function out = get.Rho(obj)
+            out = obj.Nu .* obj.U;
+        end
+        
+        function obj = set.Rho(obj, value)
+            obj.Nu = value ./  obj.U;
+        end
+        
         function out = get.C(obj)
-            out = diag(1 ./ obj.SusVect) * obj.Beta;
+            out = obj.Beta * diag(1 ./ obj.SusVect);
         end
         
         function obj = set.C(obj, value)
             assert(width(value) == obj.m);
             assert(height(value) == obj.m);
-            obj.Beta = value * diag(obj.SusVect);
+            obj.Beta =  diag(obj.SusVect) * value;
         end
         
         function out = get.P_CtoI(obj)
@@ -361,8 +409,81 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
     end
     
+    %% Function handles.
+    properties(Dependent)
+        vacc_vectorized_run function_handle
+        vacc_run function_handle
+    end
+    
+    methods
+        function M = getModelResult(obj, S_res, I_res, U_res, Nu_res)
+            % Get the sizes.
+            n = size(S_res,3);
+            R_res = U_res - (S_res + I_res);
+
+            % Get the states.
+            State(1:n) = obj;
+            for j = 1:n
+                State(j).T(:) = obj.T + days(j - 1);
+                State(j).S(:,:) = S_res(1,:,j);
+                State(j).I(:,:) = I_res(1,:,j);
+                State(j).R(:,:) = R_res(1,:,j);
+                State(j).Nu(:,:) = Nu_res(1,:,j);
+            end
+            
+            % Get the results.
+            M = lib.classes.ModelResult(State, 1, "EulerForward");
+        end
+        
+        function out = get.vacc_vectorized_run(obj)
+            vectorized_fcn = lib.models.SIRV_EulerForward_vectorized(obj);
+            
+            function result = f(x)
+                [S_res,I_res,U_res,StoI_res,Nu_res] = vectorized_fcn(x);
+                
+                p = size(S_res, 1);
+                
+                result = struct( ...
+                    'p', p, ...
+                    'S', S_res, ...
+                    'I', I_res, ...
+                    'U', U_res, ...
+                    'StoI', StoI_res, ...
+                    'Nu', Nu_res, ...
+                    'getModelResult', @(i)obj.getModelResult(S_res(i,:,:), I_res(i,:,:), U_res(i,:,:),Nu_res(i,:,:)) ...
+                );
+            end
+            
+            out = @f;
+            
+        end
+        
+        function out = get.vacc_run(obj)
+            aa = lib.models.SIRV_EulerForward_vectorized(obj);
+            out = @(x)aa(x');
+        end
+    end
+    
+    
     %% Loading from datasources.
     methods
+        function obj = loadVaccinationStrategy(obj, Strategy, TimeStep)
+            % Initialize the strategy if nessicary.
+            if ~isa(Strategy, 'lib.classes.VaccinationStrategy')
+                if nargin < 3
+                    TimeStep = days(1);
+                end
+                Strategy = lib.classes.VaccinationStrategy(obj, Stategy, TimeStep);
+            end
+            
+            % Retime and set strategy to the time of this ModelState.
+            v = Strategy.retime(obj.T);
+            v.InitialV = obj.V;
+            
+            % Set the Rho of this ModelState.
+            obj.Rho = v.Rho(:,1);
+        end
+        
         function obj = loadContactMatrix(obj, filename)
             obj.C = lib.conversions.contactMatrix(...
                 filename,...
@@ -403,24 +524,65 @@ classdef ModelState < lib.classes.AgeGroupPopulation
         end
     end
     
-    %% Running the model.
+    %% Variable conversions.
     methods
+        function out = toVaccinationStrategy(obj)
+            out = lib.classes.VaccinationStrategy( ...
+                obj, ...
+                obj.Rho, ...
+                obj.T ...
+            );
+            out.InitialV = obj.V;
+        end
         
-        function result = run(obj, DeltaT, n, Method)
-            % RUN Runs the model and return a `ModelResult instance`.
+        function out = toModelResult(obj, DeltaT, Method)
+            % Get the default variables.
+            if nargin <= 2
+                DeltaT = 1;
+            end
             if nargin <= 3
                 Method = "EulerForward";
             end
             
+            % Return the ModelResult.
+            out = lib.classes.ModelResult( ...
+                obj, ...
+                DeltaT, ...
+                Method ...
+            );
+        end
+    end
+    
+    %% Running the model.
+    methods
+        
+        function result = run(obj, DeltaT, n, Method, VaccinationStrategy)
+            % RUN Runs the model and return a `ModelResult instance`.
+            
+            % Set default argument values.
+            if nargin <= 3
+                Method = "EulerForward";
+            end
+            if nargin <= 4
+                VaccinationStrategy = obj.toVaccinationStrategy();
+            end
+            
+            % Check input arguments.
+            assert(isa(VaccinationStrategy, 'lib.classes.VaccinationStrategy'), 'Invalid Vaccination strategy.');
             assert(DeltaT > 0, 'DeltaT has to be bigger than 0');
             assert(n > 0, 'n has to be bigger than 0');
+            
+            % Get Nu
+            dt_days = days(DeltaT);
+            T_end = obj.T + dt_days * (n - 1);
+            nu = VaccinationStrategy.retime(obj.T:dt_days:T_end).Nu;
             
             % Run the model with the chosen method.
             switch string(Method)
                 case "EulerForward"
-                    [SRes, IRes, RRes] = obj.run_EulerForward(DeltaT, n);
+                    [SRes, IRes, RRes] = obj.run_EulerForward(DeltaT, n, nu);
                 case "EulerBackward"
-                    [SRes, IRes, RRes] = obj.run_EulerBackward(DeltaT, n);
+                    [SRes, IRes, RRes] = obj.run_EulerBackward(DeltaT, n, nu);
                 otherwise
                     error(strcat("Method '", string(Method), "' not recognised/implemented."));
             end
@@ -428,10 +590,11 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             % Create the state vector.
             State(1:n) = obj;
             for i = 1:n
-                State(i).T = obj.T + days(DeltaT * (i - 1));
-                State(i).S = SRes(:,i);
-                State(i).I = IRes(:,i);
-                State(i).R = RRes(:,i);
+                State(i).T  = obj.T + days(DeltaT * (i - 1));
+                State(i).S  = SRes(:,i);
+                State(i).I  = IRes(:,i);
+                State(i).R  = RRes(:,i);
+                State(i).Nu = nu(:,i);
             end
             
            
@@ -467,9 +630,13 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             result.R = RRes(:,2);
         end
         
-        function [S,I,R,V] = run_EulerForward(obj, DeltaT, n)
+        function [S,I,R,V] = run_EulerForward(obj, DeltaT, n, nu)
             % RUN_EULERFORWARD Runs the model using the EulerForward
             %                  numeric method.
+            if nargin < 4 || isempty(nu)
+                nu = [obj.Nu, zeros(obj.m, n - 1)];
+            end
+            
             [SRes,IRes,RRes,VRes] = lib.models.SIRV_EulerForward(...
                 obj.S,...
                 obj.I,...
@@ -477,7 +644,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                 obj.V,...
                 obj.Beta,...
                 obj.Alpha,...
-                [obj.Nu, zeros(obj.m, n - 1)],...
+                nu,...
                 DeltaT,...
                 n...
             );
@@ -488,9 +655,13 @@ classdef ModelState < lib.classes.AgeGroupPopulation
             V = VRes;
         end
         
-        function [S,I,R,V] = run_EulerBackward(obj, DeltaT, n)
+        function [S,I,R,V] = run_EulerBackward(obj, DeltaT, n, nu)
             % RUN_EULERBACKWARD Runs the model using the EulerBackward
             %                   numeric method.
+            if nargin < 4 || isempty(nu)
+                nu = [obj.Nu, zeros(obj.m, n - 1)];
+            end
+            
             [SRes,IRes,RRes,VRes] = lib.models.SIRV_EulerBackward(...
                 obj.S,...
                 obj.I,...
@@ -498,7 +669,7 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                 obj.V,...
                 obj.Beta,...
                 obj.Alpha,...
-                zeros(obj.m, n),...
+                nu,...
                 DeltaT,...
                 n...
             );
@@ -538,6 +709,60 @@ classdef ModelState < lib.classes.AgeGroupPopulation
                 ], ...
                 'RowNames', string(obj.categories()) ...
             );
+        end
+    end
+    
+    %% Plots
+    methods
+        function h = plotHeatMap(obj, varargin)
+            par = gcf;
+            
+            Data = "Beta"; % "C" "P_CtoI"
+            Title = [];
+            XLabel = "Transmitting Group";
+            YLabel = "Receiving Group";
+            
+            for ii = 1:2:length(varargin)
+                switch string(varargin{ii})
+                    case "Data"
+                        Data = varargin{ii + 1};
+                    case "XLabel"
+                        XLabel = varargin{ii + 1};
+                    case "YLabel"
+                        YLabel = varargin{ii + 1};
+                end
+            end
+            
+            values = obj.GroupName;
+            
+            % Getting the heatmap.
+            switch string(Data)
+                case "Beta"
+                    h = heatmap(par, values, values, obj.Beta);
+                case "C"
+                    h = heatmap(par, values, values, obj.C);
+                case "P_CtoI"
+                    h = heatmap(par, values, values, obj.P_CtoI);
+                otherwise
+                    error(strcat("Doesn't recognise data '", Data, "'."));
+            end
+            
+            if ~isempty(Title)
+                h.Title = Title;
+            else
+                switch string(Data)
+                    case "Beta"
+                        h.Title = "Values of \beta";
+                    case "C"
+                        h.Title = strcat("Contacts (Adjusted for R_0 = ", num2str(obj.ReprNum) ,")");
+                    case "P_CtoI"
+                        h.Title = "P_{C \to I}";
+                end
+            end
+            
+            h.XLabel = XLabel;
+            h.YLabel = YLabel;
+            
         end
     end
 end

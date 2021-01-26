@@ -1,0 +1,56 @@
+% This file was created by matlab2tikz.
+%
+%The latest updates can be retrieved from
+%  http://www.mathworks.com/matlabcentral/fileexchange/22022-matlab2tikz-matlab2tikz
+%where you can also make suggestions and rate matlab2tikz.
+%
+\begin{tikzpicture}
+
+\begin{axis}[%
+width=6.028in,
+height=4.754in,
+at={(1.011in,0.642in)},
+scale only axis,
+bar shift auto,
+xmin=-0.2,
+xmax=9.2,
+xtick={1,2,3,4,5,6,7,8},
+xticklabels={{0-9},{10-19},{20-29},{30-39},{40-49},{50-59},{60-69},{70+}},
+ymin=0,
+ymax=14,
+axis background/.style={fill=white},
+title style={font=\bfseries},
+title={Lethality per Age Group}
+]
+\addplot[ybar, bar width=0.8, draw=black, area legend] table[row sep=crcr] {%
+1	0.022274\\
+2	0.022274\\
+3	0.022274\\
+4	0.022274\\
+5	0.022274\\
+6	0.221398\\
+7	1.351613\\
+8	13.4212\\
+};
+\addplot[forget plot, color=white!15!black] table[row sep=crcr] {%
+-0.2	0\\
+9.2	0\\
+};
+\end{axis}
+
+\begin{axis}[%
+width=7.778in,
+height=5.833in,
+at={(0in,0in)},
+scale only axis,
+xmin=0,
+xmax=1,
+ymin=0,
+ymax=1,
+axis line style={draw=none},
+ticks=none,
+axis x line*=bottom,
+axis y line*=left
+]
+\end{axis}
+\end{tikzpicture}%

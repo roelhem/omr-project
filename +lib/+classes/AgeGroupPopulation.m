@@ -1,6 +1,21 @@
 classdef AgeGroupPopulation < lib.classes.AgeGroup
     %AGEGROUPPOPULATION Manages age groups and there associate population.
     
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = obj.toStruct@lib.classes.AgeGroup();
+            out.Population = obj.Population;
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            out = lib.classes.AgeGroupPopulation(s.Boundaries, s.Population);
+        end
+    end
+    
+    %% Initialisation
     properties
         Population
     end
@@ -82,5 +97,18 @@ classdef AgeGroupPopulation < lib.classes.AgeGroup
             out = O * V;
         end
     end
+    
+    %% Dependent properties
+    properties(Dependent)
+        PopulationTotal double
+    end
+    
+    methods
+        function out = get.PopulationTotal(obj)
+            out = sum(obj.Population);
+        end
+    end
+    
+    
 end
 

@@ -1,6 +1,23 @@
 classdef ModelResult < lib.classes.AgeGroupPopulation
     %MODELRESULT The results got form a model that run successfully.
     
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = obj.toStruct@lib.classes.AgeGroupPopulation();
+            out.State = arrayfun(@(x)x.toStruct, obj.State);
+            out.DeltaT = obj.DeltaT;
+            out.Method = obj.Method;
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            State = arrayfun(@(x)lib.classes.ModelState.fromStruct(x), s.State);
+            out = lib.classes.ModelResult(State, s.DeltaT, s.Method);
+        end
+    end
+    
     %% Initialisation
     methods
         function obj = ModelResult(State, DeltaT, Method)
@@ -82,8 +99,6 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
             for i = 1:length(cols)
                 colname = cols{i};
                 switch string(colname)
-                    case "T"
-                        columns.T = obj.T';
                     otherwise
                         value = obj.getValue(colname)';
                         if GroupSubTables && width(value) == obj.m
@@ -115,6 +130,14 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
                 StartDate ...
             );
         end
+        
+        function result = toVaccinationStrategy(obj)
+            result = lib.classes.VaccinationStrategy( ...
+                obj, ...
+                obj.Rho, ...
+                obj.T ...
+            );
+        end
     end
     
     %% Derrived properties from the ModelState.
@@ -131,6 +154,7 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
         Tau        double % [m x n]
         Beta       double % [m x m x n]
         Nu         double % [m x n]
+        Rho        double % [m x n]
         SusVect    double % [m x n]
         C          double % [m x m x n]
         P_CtoI     double % [m x m x n]
@@ -196,6 +220,10 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
         
         function out = get.Nu(obj)
             out = obj.getValue('Nu');
+        end
+        
+        function out = get.Rho(obj)
+            out = obj.getValue('Rho');
         end
         
         function out = get.SusVect(obj)
@@ -305,6 +333,13 @@ classdef ModelResult < lib.classes.AgeGroupPopulation
                 result = obj;
             end
         end
+    end
+    
+    %% Plots
+    methods
+        
+        
+        
     end
 end
 

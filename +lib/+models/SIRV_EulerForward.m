@@ -30,11 +30,12 @@ I(:,1) = Izero;
 R(:,1) = Rzero;
 V(:,1) = Vzero;
 
+B = beta * diag(1./N);
 
 %% Reccursively computing the values.
 for i = 1:n-1
     % Getting the transmission between groups.
-    StoI = (beta * I(:,i) ./ N) .* S(:,i);
+    StoI = (B * I(:,i)) .* S(:,i);
     ItoR = alpha * I(:,i);
     StoV = nu(:, i) .* S(:,i);
     ItoV = nu(:, i) .* I(:,i);

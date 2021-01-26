@@ -1,7 +1,21 @@
-classdef AgeGroup
+classdef AgeGroup < lib.classes.Serializable
     %AGEGROUP Summary of this class goes here
     %   Detailed explanation goes here
     
+    %% Serialisation
+    methods
+        function out = toStruct(obj)
+            out = struct('Boundaries', obj.Boundaries);
+        end
+    end
+    
+    methods(Static)
+        function out = fromStruct(s)
+            out = lib.classes.AgeGroup(s.Boundaries);
+        end
+    end
+    
+    %% Initialisation
     properties
         Boundaries
     end
@@ -141,6 +155,25 @@ classdef AgeGroup
         
         function out = get.GroupName(obj)
             out = string(obj.GroupCategory);
+        end
+    end
+    
+    %% Plots (and plot helpers)
+    methods
+        function out = getGroupLabels(obj, prefix, suffix)
+            if nargin < 2
+                prefix = '';
+            end
+            
+            if nargin < 3
+                suffix = '';
+            end
+            
+            out = repmat("", obj.m, 1);
+            for i = 1:obj.m
+                out(i) = strcat(prefix, obj.GroupName(i), suffix);
+            end
+            
         end
     end
     
